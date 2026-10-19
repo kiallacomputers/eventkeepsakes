@@ -89,7 +89,13 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
       <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>
       <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-700" role="alert">{{ error }}</p>
       <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#336A57]" role="status">{{ notice }}</p>
-      <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="btn">Manage guest photos and videos →</NuxtLink>
+      <section class="panel flex flex-wrap items-center justify-between gap-4" aria-label="Guest media management">
+        <div>
+          <h2 class="text-xl font-semibold text-[#0C1D2D]">Guest Media Management</h2>
+          <p class="mt-1 text-sm text-[#536273]">Review, approve and manage guest photos and videos.</p>
+        </div>
+        <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="btn">Manage Photos &amp; Videos →</NuxtLink>
+      </section>
       <div class="grid gap-6 lg:grid-cols-[1fr_280px]">
         <form class="panel space-y-5" @submit.prevent="save">
           <h2 class="text-xl font-semibold">Event details</h2>
