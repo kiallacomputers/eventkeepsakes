@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route=useRoute()
 const client=useSupabaseClient()
+const dialog=useAppDialog()
 const slug=String(route.params.slug)
 const item=ref<any>(null)
 const loading=ref(true),busy=ref(false),error=ref(''),notice=ref(''),pin=ref(''),unlocked=ref(false)
@@ -39,6 +40,7 @@ async function upload(){
    completed++
   }
   notice.value=`${completed} file(s) uploaded successfully.${item.value?.moderation_enabled?' Awaiting event holder approval.':''}`
+  dialog.show(notice.value, 'success', 'Memories uploaded')
   files.value=[]
   const picker=document.getElementById('guest-files') as HTMLInputElement|null
   if(picker)picker.value=''

@@ -92,6 +92,8 @@ async function signOut() {
       <NuxtPage />
     </main>
 
+    <AppDialog />
+
     <!-- Footer -->
     <footer
       class="border-t border-[#E4D8C5]

@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 definePageMeta({ middleware: 'auth' })
 const route = useRoute()
 const client = useSupabaseClient()
+const dialog = useAppDialog()
 const event = ref<any>(null)
 const error = ref('')
 const notice = ref('')
@@ -58,6 +59,7 @@ async function save() {
     }).eq('id', event.value.id)
     if (err) throw err
     notice.value = 'Event settings saved.'
+    dialog.show(notice.value, 'success')
   } catch (e: any) { error.value = e.message || 'Unable to save.' }
   finally { saving.value = false }
 }
@@ -71,6 +73,7 @@ async function savePin() {
     event.value.pin_enabled = !!pin.value
     pin.value = ''
     notice.value = event.value.pin_enabled ? 'PIN updated.' : 'PIN disabled.'
+    dialog.show(notice.value, 'success')
   } catch (e: any) { error.value = e.message || 'Unable to update PIN.' }
   finally { pinSaving.value = false }
 }
@@ -78,7 +81,7 @@ function downloadQr() {
   if (!qrDataUrl.value || !event.value) return
   const a = document.createElement('a'); a.href = qrDataUrl.value; a.download = `eventkeepsakes-${event.value.slug}-qr.png`; a.click()
 }
-async function copyLink() { try { await navigator.clipboard.writeText(guestUrl.value); notice.value = 'Guest link copied.' } catch { error.value = 'Unable to copy. Select the link manually.' } }
+async function copyLink() { try { await navigator.clipboard.writeText(guestUrl.value); notice.value = 'Guest link copied.'; dialog.show(notice.value, 'success') } catch { error.value = 'Unable to copy. Select the link manually.' } }
 onMounted(() => { windowOrigin.value = window.location.origin; load() })
 </script>
 <template>

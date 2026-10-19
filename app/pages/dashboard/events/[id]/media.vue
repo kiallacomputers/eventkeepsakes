@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
 const route=useRoute(),client=useSupabaseClient()
+const dialog = useAppDialog()
 const eventId=String(route.params.id)
 const media=ref<any[]>([]),busy=ref(false),error=ref(''),notice=ref('')
 async function api<T>(path:string,options:any={}){
@@ -13,9 +14,9 @@ async function load(){busy.value=true;error.value='';try{
  media.value=data.media
 }catch(e:any){error.value=e?.data?.statusMessage||e.message}finally{busy.value=false}}
 async function change(mediaId:string,action:'approve'|'reject'|'delete'){
- if(action==='delete'&&!confirm('Permanently delete this file?'))return
+ if(action==='delete' && !(await dialog.confirm('This permanently deletes the selected photo or video. This cannot be undone.', 'Delete guest upload?', 'Delete permanently'))) return
  busy.value=true;error.value='';notice.value=''
- try{await api('/api/owner/media',{method:'POST',body:{eventId,mediaId,action}});notice.value='Media updated.';await load()}
+ try{await api('/api/owner/media',{method:'POST',body:{eventId,mediaId,action}});notice.value='Media updated.';await load();dialog.show(action==='approve'?'Photo or video approved.':action==='reject'?'Photo or video rejected.':'Photo or video permanently deleted.','success')}
  catch(e:any){error.value=e?.data?.statusMessage||e.message}finally{busy.value=false}
 }
 onMounted(load)
