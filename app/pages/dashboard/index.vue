@@ -36,7 +36,7 @@ onMounted(load)
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-12">
-    <div class="flex items-center justify-between gap-4"><h1 class="text-3xl font-bold">My events</h1><button class="text-teal-300" @click="signOut">Sign out</button></div>
+    <div class="flex items-center justify-between gap-4"><h1 class="text-3xl font-bold">My events</h1><button class="text-[#E9C38B]" @click="signOut">Sign out</button></div>
     <p class="text-slate-400 mt-3">Manage your events, QR codes and guest settings.</p>
     <form class="panel mt-8 space-y-4" @submit.prevent="createEvent">
       <h2 class="font-semibold text-xl">Create an event</h2>
@@ -47,10 +47,10 @@ onMounted(load)
     </form>
     <p v-if="loading" class="mt-8 text-slate-400">Loading events…</p>
     <div v-else class="grid md:grid-cols-2 gap-4 mt-8">
-      <NuxtLink v-for="event in events" :key="event.id" :to="`/dashboard/events/${event.id}`" class="panel block hover:border-teal-400">
+      <NuxtLink v-for="event in events" :key="event.id" :to="`/dashboard/events/${event.id}`" class="panel block hover:border-[#D6B077]">
         <h3 class="text-xl font-semibold">{{ event.title }}</h3>
         <p class="text-slate-400 text-sm mt-2">{{ event.event_date || 'Date not set' }} · {{ event.status }}</p>
-        <p class="text-teal-300 text-sm mt-4">Manage event →</p>
+        <p class="text-[#E9C38B] text-sm mt-4">Manage event →</p>
       </NuxtLink>
       <p v-if="!events.length" class="text-slate-400">No events yet. Create your first event above.</p>
     </div>

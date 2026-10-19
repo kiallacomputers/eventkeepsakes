@@ -83,12 +83,12 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
-    <NuxtLink to="/dashboard" class="text-teal-300">← My events</NuxtLink>
+    <NuxtLink to="/dashboard" class="text-[#E9C38B]">← My events</NuxtLink>
     <p v-if="loading" class="text-slate-400">Loading event…</p>
     <div v-else-if="event" class="space-y-7">
       <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-slate-400 mt-2">Manage your event, sharing and access settings.</p></div>
       <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-300" role="alert">{{ error }}</p>
-      <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-teal-200" role="status">{{ notice }}</p>
+      <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#F5D7A7]" role="status">{{ notice }}</p>
       <div class="grid gap-6 lg:grid-cols-[1fr_280px]">
         <form class="panel space-y-5" @submit.prevent="save">
           <h2 class="text-xl font-semibold">Event details</h2>

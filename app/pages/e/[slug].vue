@@ -23,7 +23,7 @@ const canUpload = computed(() => event.value?.status === 'active' && (!event.val
       <p v-if="event.event_date" class="text-slate-400">{{ event.event_date }}</p>
       <p v-if="event.pin_enabled" class="text-amber-300">This event requires a PIN. PIN entry will be available when guest uploads launch.</p>
       <p v-if="!canUpload" class="text-slate-300">Guest uploads are not currently open.</p>
-      <p v-else class="text-teal-300">Guest photo and video uploads are coming in Phase 3.</p>
+      <p v-else class="text-[#E9C38B]">Guest photo and video uploads are coming in Phase 3.</p>
       <p class="text-xs text-slate-500">No photos or videos can be uploaded from this page yet.</p>
     </div>
     <p v-else class="text-red-300">{{ error || 'Event not found.' }}</p>
