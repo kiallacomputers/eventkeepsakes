@@ -92,6 +92,10 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
       <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>
       <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-700" role="alert">{{ error }}</p>
       <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#336A57]" role="status">{{ notice }}</p>
+      <section class="panel flex flex-wrap items-center justify-between gap-4" aria-label="QR welcome sign designer">
+        <div><h2 class="text-xl font-semibold text-[#0C1D2D]">QR Welcome Sign Designer</h2><p class="mt-1 text-sm text-[#536273]">Create a personalised A4 or A5 printable sign for your guests.</p></div>
+        <NuxtLink :to="`/dashboard/events/${event.id}/sign`" class="btn">Design Welcome Sign →</NuxtLink>
+      </section>
       <section class="panel flex flex-wrap items-center justify-between gap-4" aria-label="Guest media management">
         <div>
           <h2 class="text-xl font-semibold text-[#0C1D2D]">Guest Media Management</h2>
