@@ -51,6 +51,7 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
   <NuxtLink :to="`/dashboard/events/${eventId}`" class="text-[#90612E]">← Event settings</NuxtLink>
   <div class="flex flex-wrap items-center justify-between gap-4"><h1 class="text-3xl font-bold">Guest uploads</h1><button class="btn" :disabled="busy" @click="load">Refresh</button></div>
   <section class="panel space-y-3" aria-label="Event storage and downloads">
+   <NuxtLink :to="`/dashboard/events/${eventId}/packages`" class="text-[#90612E] font-semibold">View or upgrade event package →</NuxtLink>
    <div class="flex flex-wrap items-center justify-between gap-4">
     <div><h2 class="text-xl font-semibold text-[#0C1D2D]">Storage &amp; Original Downloads</h2><p class="text-sm text-[#536273]">All downloads contain original files without preview watermarks.</p></div>
     <button class="btn" type="button" :disabled="downloading||busy||!storage?.files" @click="downloadZip">{{downloading?'Preparing ZIP…':'Download Complete Event ZIP'}}</button>
