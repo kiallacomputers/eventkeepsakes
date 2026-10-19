@@ -4,6 +4,12 @@ const route=useRoute(),client=useSupabaseClient()
 const dialog = useAppDialog()
 const eventId=String(route.params.id)
 const media=ref<any[]>([]),busy=ref(false),error=ref(''),notice=ref('')
+const activeMedia=ref<number|null>(null)
+const viewing=computed(()=>activeMedia.value===null?null:media.value[activeMedia.value]||null)
+function openMedia(index:number){activeMedia.value=index}
+function closeMedia(){activeMedia.value=null}
+function shiftMedia(delta:number){if(activeMedia.value!==null&&media.value.length)activeMedia.value=(activeMedia.value+delta+media.value.length)%media.value.length}
+function mediaKeydown(e:KeyboardEvent){if(activeMedia.value===null)return;if(e.key==='Escape')closeMedia();else if(e.key==='ArrowRight')shiftMedia(1);else if(e.key==='ArrowLeft')shiftMedia(-1)}
 async function api<T>(path:string,options:any={}){
  const {data:{session}}=await client.auth.getSession()
  if(!session)throw new Error('Please sign in again')
@@ -19,7 +25,8 @@ async function change(mediaId:string,action:'approve'|'reject'|'delete'){
  try{await api('/api/owner/media',{method:'POST',body:{eventId,mediaId,action}});notice.value='Media updated.';await load();dialog.show(action==='approve'?'Photo or video approved.':action==='reject'?'Photo or video rejected.':'Photo or video permanently deleted.','success')}
  catch(e:any){error.value=e?.data?.statusMessage||e.message}finally{busy.value=false}
 }
-onMounted(load)
+onMounted(()=>{load();window.addEventListener('keydown',mediaKeydown)})
+onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
 </script>
 <template>
  <main class="mx-auto max-w-6xl px-5 py-10 space-y-6">
@@ -29,12 +36,26 @@ onMounted(load)
   <p v-if="!media.length" class="panel">{{busy?'Loading uploads…':'No completed uploads yet.'}}</p>
   <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
    <article v-for="m in media" :key="m.id" class="panel space-y-3">
-    <img v-if="m.media_type==='image'&&m.url" :src="m.url" alt="Uploaded event photo" class="aspect-video w-full rounded-lg object-cover" />
-    <video v-else-if="m.url" :src="m.url" controls playsinline class="aspect-video w-full rounded-lg bg-black object-contain" />
+    <button v-if="m.url" type="button" class="relative block w-full" :aria-label="`View ${m.media_type==='image'?'photo':'video'} in browser`" @click="openMedia(media.indexOf(m))">
+     <img v-if="m.media_type==='image'" :src="m.url" alt="Uploaded event photo" class="aspect-video w-full rounded-lg object-cover" />
+     <video v-else :src="m.url" preload="metadata" muted playsinline class="pointer-events-none aspect-video w-full rounded-lg bg-black object-contain" />
+     <span v-if="m.media_type!=='image'" class="absolute inset-0 flex items-center justify-center text-5xl text-white" aria-hidden="true">▶</span>
+    </button>
     <p class="break-all text-sm font-semibold">{{m.original_name}}</p>
     <p class="text-xs text-[#536273]">{{m.contributor_name||'Anonymous'}} · {{(m.size_bytes/1048576).toFixed(1)}} MB · {{m.status}}</p>
-    <div class="flex flex-wrap gap-2"><button v-if="m.status!=='approved'" class="btn text-sm" :disabled="busy" @click="change(m.id,'approve')">Approve</button><button v-if="m.status!=='rejected'" class="text-sm text-[#90612E]" :disabled="busy" @click="change(m.id,'reject')">Reject</button><button class="text-sm text-red-700" :disabled="busy" @click="change(m.id,'delete')">Delete</button><a v-if="m.url" :href="m.url" target="_blank" rel="noopener" class="text-sm text-[#90612E]">Open</a></div>
+    <div class="flex flex-wrap gap-2"><button v-if="m.status!=='approved'" class="btn text-sm" :disabled="busy" @click="change(m.id,'approve')">Approve</button><button v-if="m.status!=='rejected'" class="text-sm text-[#90612E]" :disabled="busy" @click="change(m.id,'reject')">Reject</button><button class="text-sm text-red-700" :disabled="busy" @click="change(m.id,'delete')">Delete</button><a v-if="m.url" :href="m.url" target="_blank" rel="noopener" class="text-sm text-[#90612E]">Open original</a></div>
    </article>
   </div>
+  <Teleport to="body">
+   <div v-if="viewing" class="fixed inset-0 z-[9000] flex items-center justify-center bg-[#081724]/95 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Event media viewer" @click.self="closeMedia">
+    <div class="flex h-full w-full max-w-5xl flex-col items-center justify-center gap-3">
+     <div class="flex w-full items-center justify-between gap-3 text-white"><span class="text-sm">{{(activeMedia??0)+1}} of {{media.length}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="closeMedia">Close ×</button></div>
+     <img v-if="viewing.media_type==='image'" :src="viewing.url" alt="Enlarged event photo" class="min-h-0 max-h-[72vh] max-w-full rounded-lg object-contain" />
+     <video v-else :key="viewing.id" :src="viewing.url" controls autoplay playsinline preload="metadata" class="min-h-0 max-h-[72vh] max-w-full rounded-lg bg-black" >Your browser cannot play this video format.</video>
+     <div class="flex w-full items-center justify-between gap-4 text-white"><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(-1)">← Previous</button><span class="text-center text-sm break-all">{{viewing.original_name}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(1)">Next →</button></div>
+     <a :href="viewing.url" target="_blank" rel="noopener" class="rounded-lg bg-[#D6B077] px-5 py-2 font-semibold text-[#0C1D2D]">Open original</a>
+    </div>
+   </div>
+  </Teleport>
  </main>
 </template>

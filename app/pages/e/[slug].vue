@@ -104,7 +104,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     <div class="flex h-full w-full max-w-5xl flex-col items-center justify-center gap-3">
      <div class="flex w-full items-center justify-between gap-3 text-white"><span class="text-sm">{{(activeMedia??0)+1}} of {{media.length}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="closeMedia">Close ×</button></div>
      <img v-if="viewing.media_type==='image'" :src="viewing.url" alt="Enlarged guest event photo" class="min-h-0 max-h-[72vh] max-w-full rounded-lg object-contain" />
-     <video v-else :key="viewing.id" :src="viewing.url" controls autoplay playsinline class="min-h-0 max-h-[72vh] max-w-full rounded-lg" />
+     <video v-else :key="viewing.id" :src="viewing.url" controls autoplay playsinline preload="metadata" class="min-h-0 max-h-[72vh] max-w-full rounded-lg bg-black">Your browser cannot play this video format.</video>
      <div class="flex w-full items-center justify-between gap-4 text-white"><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(-1)">← Previous</button><span class="text-center text-sm">{{viewing.name||'Shared memory'}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(1)">Next →</button></div>
      <a v-if="viewing.download" :href="viewing.url" target="_blank" rel="noopener" class="rounded-lg bg-[#D6B077] px-5 py-2 font-semibold text-[#0C1D2D]">Open / save original</a>
     </div>
