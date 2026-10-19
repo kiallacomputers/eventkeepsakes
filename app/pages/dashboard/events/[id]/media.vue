@@ -39,7 +39,7 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
     <button v-if="m.url" type="button" class="relative block w-full" :aria-label="`View ${m.media_type==='image'?'photo':'video'} in browser`" @click="openMedia(media.indexOf(m))">
      <img v-if="m.media_type==='image'" :src="m.url" alt="Uploaded event photo" class="aspect-video w-full rounded-lg object-cover" />
      <video v-else :src="m.url" preload="metadata" muted playsinline class="pointer-events-none aspect-video w-full rounded-lg bg-black object-contain" />
-     <span v-if="m.media_type!=='image'" class="absolute inset-0 flex items-center justify-center text-5xl text-white" aria-hidden="true">▶</span>
+     <span v-if="m.media_type!=='image'" class="absolute inset-0 flex items-center justify-center text-5xl text-white" aria-hidden="true">▶</span><MediaWatermark />
     </button>
     <p class="break-all text-sm font-semibold">{{m.original_name}}</p>
     <p class="text-xs text-[#536273]">{{m.contributor_name||'Anonymous'}} · {{(m.size_bytes/1048576).toFixed(1)}} MB · {{m.status}}</p>
@@ -50,8 +50,8 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
    <div v-if="viewing" class="fixed inset-0 z-[9000] flex items-center justify-center bg-[#081724]/95 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Event media viewer" @click.self="closeMedia">
     <div class="flex h-full w-full max-w-5xl flex-col items-center justify-center gap-3">
      <div class="flex w-full items-center justify-between gap-3 text-white"><span class="text-sm">{{(activeMedia??0)+1}} of {{media.length}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="closeMedia">Close ×</button></div>
-     <img v-if="viewing.media_type==='image'" :src="viewing.url" alt="Enlarged event photo" class="min-h-0 max-h-[72vh] max-w-full rounded-lg object-contain" />
-     <video v-else :key="viewing.id" :src="viewing.url" controls autoplay playsinline preload="metadata" class="min-h-0 max-h-[72vh] max-w-full rounded-lg bg-black" >Your browser cannot play this video format.</video>
+     <div v-if="viewing.media_type==='image'" class="relative min-h-0 max-h-[72vh] max-w-full overflow-hidden rounded-lg"><img :src="viewing.url" alt="Enlarged event photo" class="max-h-[72vh] max-w-full object-contain" /><MediaWatermark /></div>
+     <div v-else class="relative min-h-0 max-h-[72vh] max-w-full overflow-hidden rounded-lg bg-black"><video :key="viewing.id" :src="viewing.url" controls autoplay playsinline preload="metadata" class="max-h-[72vh] max-w-full">Your browser cannot play this video format.</video><MediaWatermark /></div>
      <div class="flex w-full items-center justify-between gap-4 text-white"><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(-1)">← Previous</button><span class="text-center text-sm break-all">{{viewing.original_name}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(1)">Next →</button></div>
      <a :href="viewing.url" target="_blank" rel="noopener" class="rounded-lg bg-[#D6B077] px-5 py-2 font-semibold text-[#0C1D2D]">Open original</a>
     </div>
