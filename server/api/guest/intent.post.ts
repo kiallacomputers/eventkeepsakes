@@ -1,5 +1,6 @@
+import {storageEntitlement,storageUsage} from '../../utils/storage-plans'
 import {readBody,createError} from 'h3'
-import {adminDb,eventBySlug,requireGuest,assertOpen,MIME,MAX_IMAGE,MAX_VIDEO,QUOTA,BUCKET,randomUUID} from '../../utils/media'
+import {adminDb,eventBySlug,requireGuest,assertOpen,MIME,MAX_IMAGE,MAX_VIDEO,BUCKET,randomUUID} from '../../utils/media'
 export default defineEventHandler(async(event)=>{
  const b=await readBody(event)
  const row=await eventBySlug(String(b?.slug||''))
@@ -10,10 +11,12 @@ export default defineEventHandler(async(event)=>{
  const size=Number(b?.size)
  if(!kind || !Number.isSafeInteger(size) || size<1 || size>(kind==='image'?MAX_IMAGE:MAX_VIDEO)) throw createError({statusCode:400,statusMessage:'Unsupported file type or file size'})
  const db=adminDb()
- const {data:existing,error:quotaErr}=await db.from('event_media').select('size_bytes').eq('event_id',row.id).neq('status','rejected')
- if(quotaErr) throw createError({statusCode:500,statusMessage:'Storage quota unavailable'})
- const used=(existing||[]).reduce((n:number,x:any)=>n+Number(x.size_bytes),0)
- if(used+size>QUOTA) throw createError({statusCode:413,statusMessage:'Event storage limit reached (500 MB)'})
+ const entitlement=await storageEntitlement(row.id)
+ if(entitlement.status!=='active'||(entitlement.expiresAt&&Date.parse(entitlement.expiresAt)<Date.now()))
+  throw createError({statusCode:403,statusMessage:'Event storage has expired'})
+ const usage=await storageUsage(row.id)
+ if(usage.usedBytes+size>entitlement.limitBytes)
+  throw createError({statusCode:413,statusMessage:'Event storage limit reached'})
  const id=randomUUID()
  const path=`${row.id}/${id}`
  const {error:insertError}=await db.from('event_media').insert({id,event_id:row.id,storage_path:path,original_name:String(b?.filename||'upload').slice(0,200),mime_type:mime,size_bytes:size,media_type:kind,contributor_name:row.guest_name_mode==='disabled'?null:(name||null),status:'pending_upload'})

@@ -3,6 +3,8 @@ definePageMeta({middleware:'auth'})
 const route=useRoute(),client=useSupabaseClient()
 const dialog = useAppDialog()
 const eventId=String(route.params.id)
+const storage=ref<any>(null)
+const downloading=ref(false)
 const media=ref<any[]>([]),busy=ref(false),error=ref(''),notice=ref('')
 const activeMedia=ref<number|null>(null)
 const viewing=computed(()=>activeMedia.value===null?null:media.value[activeMedia.value]||null)
@@ -15,9 +17,25 @@ async function api<T>(path:string,options:any={}){
  if(!session)throw new Error('Please sign in again')
  return $fetch<T>(path,{...options,headers:{...options.headers,authorization:`Bearer ${session.access_token}`}})
 }
+async function downloadZip(){
+ if(downloading.value)return
+ downloading.value=true;error.value=''
+ try{
+  const {data:{session}}=await client.auth.getSession()
+  if(!session)throw new Error('Please sign in again')
+  const response=await fetch('/api/owner/export',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({eventId})})
+  if(!response.ok){const payload=await response.json().catch(()=>null);throw new Error(payload?.statusMessage||payload?.message||'Could not create ZIP download')}
+  const blob=await response.blob()
+  const url=URL.createObjectURL(blob)
+  const link=document.createElement('a');link.href=url;link.download=`eventkeepsakes-${eventId}-originals.zip`;document.body.appendChild(link);link.click();link.remove()
+  setTimeout(()=>URL.revokeObjectURL(url),60000)
+  dialog.show('Original photos and videos downloaded without watermarks.','success')
+ }catch(e:any){error.value=e?.message||'ZIP download failed'}finally{downloading.value=false}
+}
 async function load(){busy.value=true;error.value='';try{
  const data=await api<{media:any[]}>('/api/owner/media',{query:{id:eventId}})
  media.value=data.media
+ storage.value=await api<any>('/api/owner/storage',{query:{id:eventId}})
 }catch(e:any){error.value=e?.data?.statusMessage||e.message}finally{busy.value=false}}
 async function change(mediaId:string,action:'approve'|'reject'|'delete'){
  if(action==='delete' && !(await dialog.confirm('This permanently deletes the selected photo or video. This cannot be undone.', 'Delete guest upload?', 'Delete permanently'))) return
@@ -32,6 +50,17 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
  <main class="mx-auto max-w-6xl px-5 py-10 space-y-6">
   <NuxtLink :to="`/dashboard/events/${eventId}`" class="text-[#90612E]">← Event settings</NuxtLink>
   <div class="flex flex-wrap items-center justify-between gap-4"><h1 class="text-3xl font-bold">Guest uploads</h1><button class="btn" :disabled="busy" @click="load">Refresh</button></div>
+  <section class="panel space-y-3" aria-label="Event storage and downloads">
+   <div class="flex flex-wrap items-center justify-between gap-4">
+    <div><h2 class="text-xl font-semibold text-[#0C1D2D]">Storage &amp; Original Downloads</h2><p class="text-sm text-[#536273]">All downloads contain original files without preview watermarks.</p></div>
+    <button class="btn" type="button" :disabled="downloading||busy||!storage?.files" @click="downloadZip">{{downloading?'Preparing ZIP…':'Download Complete Event ZIP'}}</button>
+   </div>
+   <template v-if="storage">
+    <p class="text-sm text-[#0C1D2D]">{{(storage.usedBytes/1048576).toFixed(1)}} MB used of {{(storage.limitBytes/1048576).toFixed(0)}} MB · {{storage.files}} uploaded files</p>
+    <div class="h-3 overflow-hidden rounded-full bg-[#E4D8C5]" role="progressbar" :aria-valuenow="Math.min(100,Math.round(storage.usedBytes/storage.limitBytes*100))" aria-valuemin="0" aria-valuemax="100" aria-label="Event storage used"><div class="h-full rounded-full bg-[#B18A50]" :style="{width:`${Math.min(100,storage.usedBytes/storage.limitBytes*100)}%`}" /></div>
+    <p class="text-xs text-[#536273]">ZIP export currently supports up to {{storage.exportLimits.maxFiles}} files or {{(storage.exportLimits.maxBytes/1048576).toFixed(0)}} MB per download. Larger exports will be added later.</p>
+   </template>
+  </section>
   <p v-if="error" class="text-red-700" role="alert">{{error}}</p><p v-if="notice" class="text-green-800" role="status">{{notice}}</p>
   <p v-if="!media.length" class="panel">{{busy?'Loading uploads…':'No completed uploads yet.'}}</p>
   <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

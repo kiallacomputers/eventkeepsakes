@@ -15,11 +15,13 @@
     "@nuxtjs/tailwindcss": "^6.0.0",
     "lucide-vue-next": "^0.468.0",
     "qrcode": "^1.5.4",
-    "@supabase/supabase-js": "^2.57.0"
+    "@supabase/supabase-js": "^2.57.0",
+    "archiver": "^7.0.1"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
     "vue-tsc": "^2.2.0",
-    "@types/qrcode": "^1.5.5"
+    "@types/qrcode": "^1.5.5",
+    "@types/archiver": "^6.0.3"
   }
 }
