@@ -83,12 +83,12 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
-    <NuxtLink to="/dashboard" class="text-[#E9C38B]">← My events</NuxtLink>
-    <p v-if="loading" class="text-slate-400">Loading event…</p>
+    <NuxtLink to="/dashboard" class="text-[#90612E]">← My events</NuxtLink>
+    <p v-if="loading" class="text-[#536273]">Loading event…</p>
     <div v-else-if="event" class="space-y-7">
-      <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-slate-400 mt-2">Manage your event, sharing and access settings.</p></div>
-      <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-300" role="alert">{{ error }}</p>
-      <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#F5D7A7]" role="status">{{ notice }}</p>
+      <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>
+      <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-700" role="alert">{{ error }}</p>
+      <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#336A57]" role="status">{{ notice }}</p>
       <div class="grid gap-6 lg:grid-cols-[1fr_280px]">
         <form class="panel space-y-5" @submit.prevent="save">
           <h2 class="text-xl font-semibold">Event details</h2>
@@ -99,7 +99,7 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
             <label class="block text-sm">Status<select v-model="event.status" class="input mt-2"><option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option></select></label>
           </div>
           <h2 class="text-xl font-semibold pt-3">Upload schedule</h2>
-          <p class="text-xs text-slate-400">Times are entered in your browser's local timezone and saved as UTC. The timezone label is used for event display; timezone-aware scheduling will be expanded in Phase 3.</p>
+          <p class="text-xs text-[#536273]">Times are entered in your browser's local timezone and saved as UTC. The timezone label is used for event display; timezone-aware scheduling will be expanded in Phase 3.</p>
           <label class="block text-sm">Event timezone<input v-model="event.timezone" class="input mt-2" placeholder="Australia/Melbourne" /></label>
           <div class="grid sm:grid-cols-2 gap-4">
             <label class="block text-sm">Uploads open<input v-model="startsLocal" type="datetime-local" class="input mt-2" /></label>
@@ -118,16 +118,16 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
             <img v-if="qrDataUrl" :src="qrDataUrl" alt="Event guest link QR code" class="w-full rounded-lg bg-white p-2" />
             <input :value="guestUrl" readonly class="input text-xs" aria-label="Guest URL" />
             <div class="flex flex-wrap gap-2"><button type="button" class="btn" @click="copyLink">Copy link</button><button type="button" class="btn" @click="downloadQr">Download QR</button></div>
-            <p class="text-xs text-slate-400">This QR code is permanent. Guest uploads will be enabled in Phase 3.</p>
+            <p class="text-xs text-[#536273]">This QR code is permanent. Guest uploads will be enabled in Phase 3.</p>
           </div>
           <form class="panel space-y-4" @submit.prevent="savePin"><h2 class="text-xl font-semibold">Optional event PIN</h2>
-            <p class="text-sm text-slate-400">{{ event.pin_enabled ? 'A PIN is configured.' : 'No PIN is configured.' }} PIN-protected guest access will be enforced when Phase 3 is released.</p>
+            <p class="text-sm text-[#536273]">{{ event.pin_enabled ? 'A PIN is configured.' : 'No PIN is configured.' }} PIN-protected guest access will be enforced when Phase 3 is released.</p>
             <label class="block text-sm">New PIN (4–8 digits)<input v-model="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" class="input mt-2" placeholder="Leave blank to disable" /></label>
             <button class="btn" :disabled="pinSaving">{{ pinSaving ? 'Updating…' : 'Save PIN / disable' }}</button>
           </form>
         </div>
       </div>
     </div>
-    <p v-else class="text-red-300">{{ error || 'Event not found or you do not have access.' }}</p>
+    <p v-else class="text-red-700">{{ error || 'Event not found or you do not have access.' }}</p>
   </div>
 </template>

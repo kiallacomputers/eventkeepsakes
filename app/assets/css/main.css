@@ -1,11 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root { color-scheme: dark; }
-body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0C1D2D; }
-.input { @apply w-full rounded-lg border px-4 py-3 outline-none; background: #142D40; border-color: #5C6070; color: #FFF9F0; }
-.input:focus { border-color: #D6B077; box-shadow: 0 0 0 2px rgba(214,176,119,.16); }
-.btn { @apply inline-flex items-center justify-center rounded-lg px-5 py-3 font-semibold transition disabled:opacity-50; background: #D6B077; color: #0C1D2D; }
-.btn:hover { background: #F0CE99; }
-.panel { @apply rounded-2xl border p-6; background: #14283B; border-color: rgba(214,176,119,.27); box-shadow: 0 12px 36px rgba(0,0,0,.12); }
+:root { color-scheme: light; }
+html { background: #F8F4EB; }
+body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #F8F4EB; color: #0C1D2D; }
+a { transition: color .2s ease; }
+.input { @apply w-full rounded-lg border px-4 py-3 outline-none; background: #FFFDF9; border-color: #C9BCA8; color: #0C1D2D; }
+.input::placeholder { color: #697585; }
+.input:focus { border-color: #B68C53; box-shadow: 0 0 0 3px rgba(214,176,119,.22); }
+.btn { @apply inline-flex items-center justify-center rounded-lg px-5 py-3 font-semibold transition disabled:opacity-50; background: #0C1D2D; color: #F8F4EB; }
+.btn:hover { background: #203C52; }
+.panel { @apply rounded-2xl border p-6; background: #FFFCF6; border-color: rgba(160,123,75,.3); box-shadow: 0 10px 30px rgba(12,29,45,.06); }
 ::selection { background: #D6B077; color: #0C1D2D; }

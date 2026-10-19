@@ -36,23 +36,23 @@ onMounted(load)
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-12">
-    <div class="flex items-center justify-between gap-4"><h1 class="text-3xl font-bold">My events</h1><button class="text-[#E9C38B]" @click="signOut">Sign out</button></div>
-    <p class="text-slate-400 mt-3">Manage your events, QR codes and guest settings.</p>
+    <div class="flex items-center justify-between gap-4"><h1 class="text-3xl font-bold">My events</h1><button class="text-[#90612E]" @click="signOut">Sign out</button></div>
+    <p class="text-[#536273] mt-3">Manage your events, QR codes and guest settings.</p>
     <form class="panel mt-8 space-y-4" @submit.prevent="createEvent">
       <h2 class="font-semibold text-xl">Create an event</h2>
       <label class="block text-sm">Event name<input v-model="name" class="input mt-2" required maxlength="150" placeholder="Event name" /></label>
       <label class="block text-sm">Event date<input v-model="eventDate" class="input mt-2" type="date" /></label>
-      <p v-if="error" class="text-red-300" role="alert">{{ error }}</p>
+      <p v-if="error" class="text-red-700" role="alert">{{ error }}</p>
       <button class="btn" :disabled="busy">{{ busy ? 'Creating…' : 'Create event' }}</button>
     </form>
-    <p v-if="loading" class="mt-8 text-slate-400">Loading events…</p>
+    <p v-if="loading" class="mt-8 text-[#536273]">Loading events…</p>
     <div v-else class="grid md:grid-cols-2 gap-4 mt-8">
       <NuxtLink v-for="event in events" :key="event.id" :to="`/dashboard/events/${event.id}`" class="panel block hover:border-[#D6B077]">
         <h3 class="text-xl font-semibold">{{ event.title }}</h3>
-        <p class="text-slate-400 text-sm mt-2">{{ event.event_date || 'Date not set' }} · {{ event.status }}</p>
-        <p class="text-[#E9C38B] text-sm mt-4">Manage event →</p>
+        <p class="text-[#536273] text-sm mt-2">{{ event.event_date || 'Date not set' }} · {{ event.status }}</p>
+        <p class="text-[#90612E] text-sm mt-4">Manage event →</p>
       </NuxtLink>
-      <p v-if="!events.length" class="text-slate-400">No events yet. Create your first event above.</p>
+      <p v-if="!events.length" class="text-[#536273]">No events yet. Create your first event above.</p>
     </div>
   </div>
 </template>
