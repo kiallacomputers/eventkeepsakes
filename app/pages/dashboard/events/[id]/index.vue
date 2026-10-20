@@ -101,7 +101,6 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
-    <NuxtLink :to="`/dashboard/events/${route.params.id}/packages`" class="btn inline-flex">Packages &amp; Storage</NuxtLink>
     <NuxtLink to="/dashboard" class="text-[#90612E]">← My events</NuxtLink>
     <p v-if="loading" class="text-[#536273]">Loading event…</p>
     <div v-else-if="event" class="space-y-7">
