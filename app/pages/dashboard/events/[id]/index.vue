@@ -12,6 +12,21 @@ const loading = ref(true)
 const pin = ref('')
 const pinSaving = ref(false)
 const qrDataUrl = ref('')
+const storage = ref<any>(null)
+const storageError = ref('')
+const storageLoading = ref(false)
+const formatBytes = (n:number) => n >= 1073741824 ? `${(n/1073741824).toFixed(2)} GB` : `${(n/1048576).toFixed(1)} MB`
+const usedPercent = computed(() => storage.value?.limitBytes ? Math.min(100, Math.round(storage.value.usedBytes/storage.value.limitBytes*100)) : 0)
+async function loadStorage() {
+ storageLoading.value=true;storageError.value=''
+ try {
+  const {data:{session}}=await client.auth.getSession()
+  if(!session) throw new Error('Please sign in again')
+  storage.value=await $fetch('/api/owner/storage',{query:{id:String(route.params.id)},headers:{authorization:`Bearer ${session.access_token}`}})
+ } catch(e:any) { storageError.value=e?.data?.statusMessage||e?.message||'Unable to load storage' }
+ finally {storageLoading.value=false}
+}
+
 const guestUrl = computed(() => event.value ? `${windowOrigin.value}/e/${encodeURIComponent(event.value.slug)}` : '')
 const windowOrigin = ref('')
 const statusOptions = ['draft','active','paused','closed']
@@ -82,7 +97,7 @@ function downloadQr() {
   const a = document.createElement('a'); a.href = qrDataUrl.value; a.download = `eventkeepsakes-${event.value.slug}-qr.png`; a.click()
 }
 async function copyLink() { try { await navigator.clipboard.writeText(guestUrl.value); notice.value = 'Guest link copied.'; dialog.show(notice.value, 'success') } catch { error.value = 'Unable to copy. Select the link manually.' } }
-onMounted(() => { windowOrigin.value = window.location.origin; load() })
+onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStorage() })
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
@@ -93,6 +108,26 @@ onMounted(() => { windowOrigin.value = window.location.origin; load() })
       <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>
       <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-700" role="alert">{{ error }}</p>
       <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#336A57]" role="status">{{ notice }}</p>
+      <section class="panel space-y-4" aria-label="Event package and storage">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 class="text-xl font-semibold text-[#0C1D2D]">Event Package &amp; Storage</h2><p class="text-sm text-[#536273]">Your current package and original media storage.</p></div>
+          <NuxtLink :to="`/dashboard/events/${event.id}/packages`" class="btn">View / Upgrade Package →</NuxtLink>
+        </div>
+        <p v-if="storageLoading" class="text-sm text-[#536273]">Loading storage details…</p>
+        <p v-if="storageError" class="text-sm text-red-700" role="alert">{{ storageError }} <button type="button" class="underline" @click="loadStorage">Retry</button></p>
+        <template v-if="storage">
+          <div class="flex flex-wrap justify-between gap-4">
+            <div><p class="text-xs text-[#536273]">Current package</p><p class="text-lg font-semibold">{{ storage.packageName }}</p></div>
+            <div><p class="text-xs text-[#536273]">Storage allowance</p><p class="text-lg font-semibold">{{ formatBytes(storage.limitBytes) }}</p></div>
+          </div>
+          <p v-if="storage.activationWarning" class="rounded-lg border border-amber-400 p-3 text-sm text-amber-900" role="status">A payment was recorded, but the active storage allowance could not be matched to that package. Check the Stripe webhook activation.</p>
+          <div class="flex justify-between gap-2 text-sm"><span>Storage used</span><span>{{ formatBytes(storage.usedBytes) }} / {{ formatBytes(storage.limitBytes) }}</span></div>
+          <div class="h-3 overflow-hidden rounded-full bg-[#E4D8C5]" role="progressbar" :aria-valuenow="usedPercent" aria-valuemin="0" aria-valuemax="100" aria-label="Event storage used"><div class="h-full rounded-full bg-[#B18A50]" :style="{width:`${usedPercent}%`}" /></div>
+          <div class="flex flex-wrap justify-between gap-2 text-xs text-[#536273]"><span>{{ usedPercent }}% used · {{ storage.files }} uploaded files</span><span>{{ formatBytes(storage.remainingBytes) }} remaining</span></div>
+          <p class="text-xs text-[#536273]">{{ storage.expiresAt ? `Package expires ${new Date(storage.expiresAt).toLocaleDateString('en-AU')}` : 'No package expiry currently set' }}</p>
+          <button type="button" class="text-sm font-medium text-[#90612E] underline" @click="loadStorage">Refresh storage</button>
+        </template>
+      </section>
       <section class="panel flex flex-wrap items-center justify-between gap-4" aria-label="QR welcome sign designer">
         <div><h2 class="text-xl font-semibold text-[#0C1D2D]">QR Welcome Sign Designer</h2><p class="mt-1 text-sm text-[#536273]">Create a personalised A4 or A5 printable sign for your guests.</p></div>
         <NuxtLink :to="`/dashboard/events/${event.id}/sign`" class="btn">Design Welcome Sign →</NuxtLink>
