@@ -48,7 +48,7 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
 </script>
 <template>
  <main class="mx-auto max-w-6xl px-5 py-10 space-y-6">
-  <NuxtLink :to="`/dashboard/events/${eventId}`" class="text-[#90612E]">← Event settings</NuxtLink>
+  <NuxtLink :to="`/dashboard/events/${eventId}`" class="ek-back-button inline-flex items-center gap-2 rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold text-[#0C1D2D] shadow-sm transition hover:bg-[#F0E5D3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]"><span aria-hidden="true">←</span><span>Back</span></NuxtLink>
   <div class="flex flex-wrap items-center justify-between gap-4"><h1 class="text-3xl font-bold">Guest uploads</h1><button class="btn" :disabled="busy" @click="load">Refresh</button></div>
   <section class="panel space-y-3" aria-label="Event storage and downloads">
    <NuxtLink :to="`/dashboard/events/${eventId}/packages`" class="text-[#90612E] font-semibold">View or upgrade event package →</NuxtLink>

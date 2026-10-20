@@ -101,7 +101,7 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
-    <NuxtLink to="/dashboard" class="text-[#90612E]">← My events</NuxtLink>
+    <NuxtLink to="/dashboard" class="ek-back-button inline-flex items-center gap-2 rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold text-[#0C1D2D] shadow-sm transition hover:bg-[#F0E5D3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]"><span aria-hidden="true">←</span><span>Back</span></NuxtLink>
     <p v-if="loading" class="text-[#536273]">Loading event…</p>
     <div v-else-if="event" class="space-y-7">
       <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>

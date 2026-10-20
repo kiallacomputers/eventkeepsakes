@@ -29,7 +29,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 </script>
 <template>
  <main class="mx-auto max-w-6xl px-5 py-10 space-y-6">
-  <div class="ek-no-print flex flex-wrap items-center justify-between gap-3"><NuxtLink :to="`/dashboard/events/${route.params.id}`" class="text-[#90612E]">← Event settings</NuxtLink><h1 class="text-2xl font-bold">Welcome Sign Designer</h1></div>
+  <div class="ek-no-print flex flex-wrap items-center justify-between gap-3"><NuxtLink :to="`/dashboard/events/${route.params.id}`" class="ek-back-button inline-flex items-center gap-2 rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold text-[#0C1D2D] shadow-sm transition hover:bg-[#F0E5D3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]"><span aria-hidden="true">←</span><span>Back</span></NuxtLink><h1 class="text-2xl font-bold">Welcome Sign Designer</h1></div>
   <p v-if="loading">Loading sign designer…</p><p v-else-if="error" class="text-red-700">{{error}}</p>
   <div v-else-if="item" class="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
    <section class="panel space-y-5 ek-no-print self-start">
