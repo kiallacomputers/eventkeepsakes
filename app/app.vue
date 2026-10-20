@@ -52,11 +52,10 @@ async function signOut() {
           </span>
         </NuxtLink>
 
-        <!-- Account Navigation: Hidden on guest pages -->
-        <nav
-          v-if="showAccountNavigation"
-          class="flex items-center gap-5"
-        >
+        <!-- Public packages are available without an account; account links remain private. -->
+        <nav v-if="!isGuestPage" class="flex flex-wrap items-center gap-4 sm:gap-5">
+          <NuxtLink to="/packages" class="text-sm font-semibold text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="text-[#B18A50]">Packages</NuxtLink>
+          <template v-if="showAccountNavigation">
           <NuxtLink
             to="/dashboard"
             class="text-sm font-medium text-[#0C1D2D]
@@ -82,6 +81,7 @@ async function signOut() {
           >
             Sign out
           </button>
+          </template>
         </nav>
 
       </div>
