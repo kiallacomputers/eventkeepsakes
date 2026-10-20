@@ -36,7 +36,7 @@ const user = useSupabaseUser()
           <p><strong>{{ duration(plan.retention_days) }}</strong> retention</p>
         </div>
         <p class="text-xs text-[#64748B]">Photo estimate assumes an average 5 MB image. Videos and larger photos use more space.</p>
-        <NuxtLink :to="user ? '/dashboard' : '/register'" class="btn mt-auto block text-center">
+        <NuxtLink :to="user ? '/dashboard' : '/auth/register'" class="btn mt-auto block text-center">
           {{ user ? 'Choose for an event' : 'Get started' }}
         </NuxtLink>
       </article>
