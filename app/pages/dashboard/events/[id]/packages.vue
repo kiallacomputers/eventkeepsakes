@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
+import { estimatePhotoCount, photoEstimateSizeMb } from '~/utils/photoCapacity'
 const route=useRoute(),client=useSupabaseClient(),dialog=useAppDialog()
 const eventId=String(route.params.id)
 const plans=ref<any[]>([]),storage=ref<any>(null),payments=ref<any[]>([]),error=ref(''),busy=ref(false),selected=ref('')
@@ -16,7 +17,7 @@ onMounted(async()=>{await load();if(route.query.checkout==='success')dialog.show
  <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-3xl font-bold">Event Packages</h1><p class="text-sm text-[#536273]">Manage storage and retention for this event.</p></div><button class="btn" @click="load">Refresh</button></div>
  <p v-if="error" role="alert" class="text-red-700">{{error}}</p>
  <section v-if="storage" class="panel space-y-2"><h2 class="text-xl font-semibold">Current storage</h2><p>{{gb(storage.usedBytes)}} GB used of {{gb(storage.limitBytes)}} GB</p><p class="text-sm text-[#536273]">Status: {{storage.status}} · Expires: {{storage.expiresAt?new Date(storage.expiresAt).toLocaleDateString('en-AU'):'No expiry currently set'}}</p></section>
- <section class="grid gap-5 md:grid-cols-3"><article v-for="p in plans" :key="p.id" class="panel space-y-3"><h2 class="text-xl font-semibold">{{p.display_name}}</h2><p class="text-2xl font-bold text-[#0C1D2D]">{{money(p.price_cents,p.currency)}}</p><p>{{gb(p.storage_limit_bytes)}} GB storage</p><p>{{p.retention_days}} days retention</p><button class="btn w-full" :disabled="busy || (storage && p.storage_limit_bytes < storage.limitBytes)" @click="purchase(p)">{{selected===p.id?'Redirecting…':storage && p.storage_limit_bytes < storage.limitBytes?'Smaller than current plan':'Purchase package'}}</button></article></section>
+ <section class="grid gap-5 md:grid-cols-3"><article v-for="p in plans" :key="p.id" class="panel space-y-3"><h2 class="text-xl font-semibold">{{p.display_name}}</h2><p class="text-2xl font-bold text-[#0C1D2D]">{{money(p.price_cents,p.currency)}}</p><p>{{gb(p.storage_limit_bytes)}} GB storage</p><p class="text-sm font-semibold text-[#0C1D2D]">Approximately {{estimatePhotoCount(p.storage_limit_bytes).toLocaleString('en-AU')}} photos</p><p class="text-xs text-[#536273]">Estimate based on {{photoEstimateSizeMb}} MB per photo. Videos and larger photos reduce capacity.</p><p>{{p.retention_days}} days retention</p><button class="btn w-full" :disabled="busy || (storage && p.storage_limit_bytes < storage.limitBytes)" @click="purchase(p)">{{selected===p.id?'Redirecting…':storage && p.storage_limit_bytes < storage.limitBytes?'Smaller than current plan':'Purchase package'}}</button></article></section>
  <section class="panel space-y-3"><h2 class="text-xl font-semibold">Payment history</h2><p v-if="!payments.length" class="text-sm text-[#536273]">No completed purchases yet.</p><div v-for="p in payments" :key="p.id" class="flex flex-wrap justify-between gap-2 border-t py-2 text-sm"><span>{{p.plan_id}} · {{new Date(p.paid_at).toLocaleDateString('en-AU')}}</span><span>{{money(p.amount_cents,p.currency)}}</span></div></section>
 </main>
 </template>
