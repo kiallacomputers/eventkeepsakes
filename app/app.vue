@@ -15,6 +15,18 @@ const showAccountNavigation = computed(() => {
 
 // Sign out
 const client = useSupabaseClient()
+const isSuperAdmin = ref(false)
+watch(user, async (current) => {
+  isSuperAdmin.value = false
+  if (!current) return
+  try {
+    const { data: session } = await client.auth.getSession()
+    const result = await $fetch<{ allowed: boolean }>('/api/admin/me', {
+      headers: { Authorization: `Bearer ${session.session?.access_token || ''}` }
+    })
+    isSuperAdmin.value = result.allowed
+  } catch { isSuperAdmin.value = false }
+}, { immediate: true })
 
 async function signOut() {
   await client.auth.signOut()
@@ -64,6 +76,7 @@ async function signOut() {
             Dashboard
           </NuxtLink>
 
+          <NuxtLink v-if="isSuperAdmin" to="/admin" class="text-sm font-medium text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="!text-[#B18A50]">SuperAdmin</NuxtLink>
           <NuxtLink
             to="/account"
             class="text-sm font-medium text-[#0C1D2D]

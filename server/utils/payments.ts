@@ -13,10 +13,16 @@ export function paymentOrigin(event:any) {
  if (url.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && url.hostname==='localhost')) throw createError({statusCode:503,statusMessage:'Invalid site URL'})
  return url.origin
 }
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+ const allow = (process.env.EVENTKEEPSAKES_ADMIN_USER_IDS || '').split(',').map(x=>x.trim()).filter(Boolean)
+ if (allow.includes(userId)) return true
+ const { data, error } = await adminDb().from('profiles').select('role').eq('id', userId).maybeSingle()
+ if (error) throw createError({statusCode:500,statusMessage:'Unable to verify administrator role'})
+ return data?.role === 'superadmin'
+}
 export async function requirePackageAdmin(event:any) {
  const userId = await ownerUser(event)
- const allow = (process.env.EVENTKEEPSAKES_ADMIN_USER_IDS || '').split(',').map(x=>x.trim()).filter(Boolean)
- if (!allow.includes(userId)) throw createError({statusCode:403,statusMessage:'Administrator access required'})
+ if (!(await isSuperAdmin(userId))) throw createError({statusCode:403,statusMessage:'Administrator access required'})
  return userId
 }
 export async function activePlans() {
