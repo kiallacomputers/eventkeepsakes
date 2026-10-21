@@ -10,6 +10,7 @@ const events=ref<any[]>([])
 const reminders=ref<any[]>([])
 const audits=ref<any[]>([])
 const reminderText=ref('30,14,7')
+const extensionDays=ref<Record<string,number>>({})
 async function headers(){
  const {data}=await client.auth.getSession()
  return {Authorization:`Bearer ${data.session?.access_token||''}`}
@@ -46,6 +47,17 @@ async function scan(){
  }catch(e:any){error.value=e?.data?.statusMessage||e?.message||'Scan failed'}
  finally{busy.value=false}
 }
+async function extendEvent(eventId:string,title:string){
+ const days=Number(extensionDays.value[eventId]||30)
+ if(!Number.isInteger(days)||days<1||days>3650){error.value='Extension must be 1–3650 days.';return}
+ if(!(await dialog.confirm(`Extend retention for ${title} by ${days} days? This is an administrative extension and does not charge the customer.`, 'Confirm extension')))return
+ busy.value=true;error.value=''
+ try{
+  await $fetch('/api/admin/retention-extend',{method:'POST',headers:await headers(),body:{eventId,days}})
+  await refresh();dialog.show('Event retention extended.','success')
+ }catch(e:any){error.value=e?.data?.statusMessage||e?.message||'Extension failed'}
+ finally{busy.value=false}
+}
 onMounted(refresh)
 </script>
 <template>
@@ -64,12 +76,12 @@ onMounted(refresh)
     <input v-model.number="settings.recovery_days" type="number" min="1" max="365" class="input mt-2"/>
    </label>
    <label class="flex items-center gap-2"><input v-model="settings.reminders_enabled" type="checkbox"/> Queue reminders during manual scans</label>
-   <p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Automatic deletion OFF.</strong> This version only reports retention phases and queues reminders. It does not send emails, recover files or delete media.</p>
+   <p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Automatic deletion OFF.</strong> This version supports audited admin extensions and reminder queues. It does not send emails automatically, sell paid extensions, or delete media.</p>
    <div class="flex flex-wrap gap-3"><button class="btn" :disabled="busy" @click="save">Save settings</button><button class="btn" :disabled="busy" @click="scan">Run expiry scan</button></div>
   </section>
   <section class="panel space-y-3"><h2 class="text-xl font-semibold">Event expiry overview</h2><p class="text-sm text-[#536273]">First 200 records ordered by expiry date.</p>
-   <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Event</th><th class="p-2">Expires</th><th class="p-2">Status</th><th class="p-2">Recovery ends</th></tr></thead>
-    <tbody><tr v-for="e in events" :key="e.event_id" class="border-t"><td class="p-2">{{e.title}}</td><td class="p-2">{{e.expires_at?new Date(e.expires_at).toLocaleDateString('en-AU'):'Not set'}}</td><td class="p-2">{{e.phase.replaceAll('_',' ')}}</td><td class="p-2">{{e.recoveryEndsAt?new Date(e.recoveryEndsAt).toLocaleDateString('en-AU'):'—'}}</td></tr></tbody>
+   <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Event</th><th class="p-2">Expires</th><th class="p-2">Status</th><th class="p-2">Recovery ends</th><th class="p-2">Admin extension</th></tr></thead>
+    <tbody><tr v-for="e in events" :key="e.event_id" class="border-t"><td class="p-2">{{e.title}}</td><td class="p-2">{{e.expires_at?new Date(e.expires_at).toLocaleDateString('en-AU'):'Not set'}}</td><td class="p-2">{{e.phase.replaceAll('_',' ')}}</td><td class="p-2">{{e.recoveryEndsAt?new Date(e.recoveryEndsAt).toLocaleDateString('en-AU'):'—'}}</td><td class="p-2"><div class="flex gap-2 items-center"><input v-model.number="extensionDays[e.event_id]" type="number" min="1" max="3650" placeholder="30" class="input w-24" aria-label="Days to extend"/><button class="btn" :disabled="busy" @click="extendEvent(e.event_id,e.title)">Extend</button></div></td></tr></tbody>
    </table></div>
   </section>
   <section class="panel space-y-2"><h2 class="text-xl font-semibold">Reminder queue</h2><p class="text-sm text-[#536273]">Queued only; email delivery is not yet configured.</p><p v-if="!reminders.length">No reminders queued.</p><p v-for="r in reminders" :key="r.id" class="text-sm">{{r.event_id}} · {{r.days_before}} days · {{r.status}}</p></section>
