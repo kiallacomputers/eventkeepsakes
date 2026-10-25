@@ -6,6 +6,25 @@ const events=ref<any[]>([]),customers=ref<any[]>([]),total=ref(0),more=ref(false
 const selected=ref<any>(null),note=ref(''),saving=ref(false)
 const edit=reactive({title:'',eventDate:'',status:'draft',uploadStartsAt:'',uploadEndsAt:'',reason:''})
 const updating=ref(false)
+const health=ref<any>(null),healthBusy=ref(false),healthError=ref('')
+async function checkHealth(){
+ if(!selected.value)return
+ healthBusy.value=true;healthError.value=''
+ try{health.value=await api<any>('/api/admin/support/health',{query:{id:selected.value.event.id}})}
+ catch(e:any){healthError.value=message(e)}
+ finally{healthBusy.value=false}
+}
+function applySuggestion(key:string){
+ if(!health.value)return
+ if(key==='status')edit.status='active'
+ if(key==='window'){
+  const start=new Date()
+  const end=new Date(start.getTime()+7*86400000)
+  if(!edit.uploadStartsAt)edit.uploadStartsAt=toLocal(start.toISOString())
+  if(!edit.uploadEndsAt||new Date(edit.uploadEndsAt).getTime()<Date.now())edit.uploadEndsAt=toLocal(end.toISOString())
+ }
+ document.getElementById('support-event-edit')?.scrollIntoView({behavior:'smooth'})
+}
 function toLocal(v:string|null){if(!v)return '';const d=new Date(v);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
 function fromLocal(v:string){return v?new Date(v).toISOString():null}
 function initEdit(e:any){
@@ -49,7 +68,7 @@ async function load(){
 }
 async function openEvent(id:string){
  error.value=''
- try{selected.value=await api<any>('/api/admin/support/event',{query:{id}});initEdit(selected.value.event)}
+ try{selected.value=await api<any>('/api/admin/support/event',{query:{id}});initEdit(selected.value.event);health.value=null;await checkHealth()}
  catch(e:any){error.value=message(e)}
 }
 async function saveNote(){
