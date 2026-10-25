@@ -2,7 +2,8 @@ import {getQuery} from 'h3'
 import {adminDb,ownerEvent} from '../../utils/media'
 import {storageEntitlement} from '../../utils/storage-plans'
 export default defineEventHandler(async event=>{
- const eventId=String(getQuery(event).eventId||'')
+ const query = getQuery(event)
+ const eventId = String(query.id || query.eventId || '')
  await ownerEvent(event,eventId)
  const db=adminDb(),ent=await storageEntitlement(eventId)
  const {data,error}=await db.from('event_media').select('id,size_bytes,status').eq('event_id',eventId)
