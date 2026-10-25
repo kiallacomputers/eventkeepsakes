@@ -8,6 +8,8 @@ const loading=ref(true),busy=ref(false),error=ref(''),notice=ref(''),pin=ref('')
 const guestName=ref(''),media=ref<any[]>([]),galleryError=ref('')
 type UploadState = { key:string; file:File; preview:string|null; state:'ready'|'uploading'|'uploaded'|'failed'; error:string }
 const uploads=ref<UploadState[]>([])
+const dragging=ref(false)
+const dragDepth=ref(0)
 const uploadDone=computed(()=>uploads.value.filter(x=>x.state==='uploaded').length)
 const uploadFailed=computed(()=>uploads.value.filter(x=>x.state==='failed').length)
 const uploadPercent=computed(()=>uploads.value.length?Math.round(uploadDone.value/uploads.value.length*100):0)
@@ -42,14 +44,44 @@ async function loadGallery(){galleryError.value='';try{
  const response=await $fetch<{media:any[]}>('/api/guest/gallery',{query:{slug}})
  media.value=response.media
 }catch(e:any){galleryError.value=e?.data?.statusMessage||'Unable to load gallery'}}
-function selected(e:Event){
- const input=e.target as HTMLInputElement
- const picked=Array.from(input.files||[])
- for(const file of picked){
+const allowedTypes = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif','video/mp4','video/quicktime','video/webm'])
+function addFiles(files:File[]){
+ if(busy.value||!canUpload.value)return
+ const accepted=files.filter(f=>allowedTypes.has(f.type))
+ const rejected=files.length-accepted.length
+ for(const file of accepted){
   const key=`${file.name}:${file.size}:${file.lastModified}:${Math.random()}`
   uploads.value.push({key,file,preview:file.type.startsWith('image/')?URL.createObjectURL(file):null,state:'ready',error:''})
  }
+ if(rejected)error.value=`${rejected} file(s) were not added because their file type is unsupported.`
+ else error.value=''
+}
+function selected(e:Event){
+ const input=e.target as HTMLInputElement
+ addFiles(Array.from(input.files||[]))
  input.value=''
+}
+function dragEnter(e:DragEvent){
+ e.preventDefault()
+ if(busy.value||!canUpload.value)return
+ dragDepth.value++
+ dragging.value=true
+}
+function dragOver(e:DragEvent){
+ e.preventDefault()
+ if(e.dataTransfer)e.dataTransfer.dropEffect=busy.value?'none':'copy'
+}
+function dragLeave(e:DragEvent){
+ e.preventDefault()
+ dragDepth.value=Math.max(0,dragDepth.value-1)
+ if(dragDepth.value===0)dragging.value=false
+}
+function dropFiles(e:DragEvent){
+ e.preventDefault()
+ dragging.value=false
+ dragDepth.value=0
+ if(busy.value||!canUpload.value)return
+ addFiles(Array.from(e.dataTransfer?.files||[]))
 }
 async function uploadOne(x:UploadState){
  x.state='uploading';x.error=''
@@ -102,10 +134,10 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
       <label v-if="item.guest_name_mode!=='disabled'" class="block text-sm font-semibold" for="guest-name">Your name {{item.guest_name_mode==='required'?'(required)':'(optional)'}}
        <input id="guest-name" v-model="guestName" class="input mt-2" maxlength="120" :required="item.guest_name_mode==='required'" placeholder="Your name" />
       </label>
-      <label for="guest-files" class="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#D6B077] bg-[#FFFDF8] p-5 text-center transition hover:bg-[#F8F0E2] focus-within:ring-2 focus-within:ring-[#B18A50]">
+      <label for="guest-files" class="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 text-center transition focus-within:ring-2 focus-within:ring-[#B18A50]" :class="dragging ? 'border-[#B18A50] bg-[#F0E2C8] ring-2 ring-[#B18A50]' : 'border-[#D6B077] bg-[#FFFDF8] hover:bg-[#F8F0E2]'" @dragenter.prevent="dragEnter" @dragover.prevent="dragOver" @dragleave.prevent="dragLeave" @drop.prevent="dropFiles">
        <span class="text-3xl" aria-hidden="true">📷</span>
-       <span class="font-semibold text-[#0C1D2D]">Choose photos &amp; videos</span>
-       <span class="text-xs text-[#536273]">Select multiple files from your device</span>
+       <span class="font-semibold text-[#0C1D2D]">{{ dragging ? 'Drop your photos & videos here' : 'Drag & drop photos and videos here' }}</span>
+       <span class="text-xs text-[#536273]">or click to browse your device · Select multiple files</span>
        <input id="guest-files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm" multiple class="sr-only" :disabled="busy" @change="selected" />
       </label>
       <p class="text-xs text-[#647080]">Photos up to 20 MB each · Videos up to 100 MB each · Uploads may require organiser approval.</p>
