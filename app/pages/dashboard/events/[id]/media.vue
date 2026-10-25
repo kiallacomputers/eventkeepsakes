@@ -98,7 +98,7 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
     </button>
     <p class="break-all text-sm font-semibold">{{m.original_name}}</p>
     <p class="text-xs text-[#536273]">{{m.contributor_name||'Anonymous'}} · {{(m.size_bytes/1048576).toFixed(1)}} MB · {{m.status}}</p>
-    <div class="flex flex-wrap gap-2"><button v-if="m.status!=='approved'" class="btn text-sm" :disabled="busy" @click="change(m.id,'approve')">Approve</button><button v-if="m.status!=='rejected'" class="text-sm text-[#90612E]" :disabled="busy" @click="change(m.id,'reject')">Reject</button><button class="text-sm text-red-700" :disabled="busy" @click="change(m.id,'delete')">Delete</button><a v-if="m.url" :href="m.url" target="_blank" rel="noopener" class="text-sm text-[#90612E]">Open original</a></div>
+    <div class="flex flex-wrap gap-2"><button v-if="m.status!=='approved'" class="btn text-sm" :disabled="busy" @click="change(m.id,'approve')">Approve</button><button v-if="m.status!=='rejected'" class="text-sm text-[#90612E]" :disabled="busy" @click="change(m.id,'reject')">Reject</button><button class="text-sm text-red-700" :disabled="busy" @click="change(m.id,'delete')">Delete</button></div>
    </article>
   </div>
   <Teleport to="body">
@@ -115,7 +115,7 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
       </button>
      </div>
      <p class="text-center text-xs text-white/70">Swipe left or right on mobile · Use arrow keys on desktop · Esc to close</p>
-     <a :href="viewing.url" target="_blank" rel="noopener" class="rounded-lg bg-[#D6B077] px-5 py-2 font-semibold text-[#0C1D2D]">Open original</a>
+     
     </div>
    </div>
   </Teleport>
