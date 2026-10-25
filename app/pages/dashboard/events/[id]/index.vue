@@ -12,6 +12,27 @@ const loading = ref(true)
 const pin = ref('')
 const pinSaving = ref(false)
 const qrDataUrl = ref('')
+const overview = ref<any>(null)
+const overviewError = ref('')
+const overviewLoading = ref(false)
+async function loadOverview() {
+ overviewLoading.value=true;overviewError.value=''
+ try {
+  const {data:{session}}=await client.auth.getSession()
+  if(!session)throw new Error('Please sign in again')
+  overview.value=await $fetch('/api/owner/overview',{
+   query:{id:String(route.params.id)},
+   headers:{authorization:`Bearer ${session.access_token}`}
+  })
+ }catch(e:any){overviewError.value=e?.data?.statusMessage||e?.message||'Unable to load event overview'}
+ finally{overviewLoading.value=false}
+}
+const reservedStorage = computed(()=>Number(storage.value?.reservedBytes||0))
+const remainingStorage = computed(()=>Math.max(0,Number(storage.value?.availableBytes ?? storage.value?.remainingBytes ?? 0)))
+const eventDateLabel = computed(()=>event.value?.event_date
+ ? new Date(`${event.value.event_date}T12:00:00`).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})
+ : 'Date not set')
+const uploadStatusLabel = computed(()=>overview.value?.uploadState==='open'?'Uploads open':overview.value?.uploadState==='scheduled'?'Opens soon':'Uploads closed')
 const storage = ref<any>(null)
 const storageError = ref('')
 const storageLoading = ref(false)
@@ -97,7 +118,7 @@ function downloadQr() {
   const a = document.createElement('a'); a.href = qrDataUrl.value; a.download = `eventkeepsakes-${event.value.slug}-qr.png`; a.click()
 }
 async function copyLink() { try { await navigator.clipboard.writeText(guestUrl.value); notice.value = 'Guest link copied.'; dialog.show(notice.value, 'success') } catch { error.value = 'Unable to copy. Select the link manually.' } }
-onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStorage() })
+onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStorage(); loadOverview() })
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
@@ -107,6 +128,52 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
       <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>
       <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-700" role="alert">{{ error }}</p>
       <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#336A57]" role="status">{{ notice }}</p>
+      <!-- Phase 9B: read-only owner overview. Existing event settings are preserved. -->
+      <section class="space-y-4" aria-label="Event overview">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-semibold text-[#0C1D2D]">Event overview</h2>
+            <p class="text-sm text-[#536273]">{{ eventDateLabel }} · {{ event.status }}</p>
+          </div>
+          <button type="button" class="rounded-lg border border-[#D6B077] px-4 py-2 text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]" :disabled="overviewLoading || storageLoading" @click="loadOverview(); loadStorage()">
+            {{ overviewLoading || storageLoading ? 'Refreshing…' : 'Refresh overview' }}
+          </button>
+        </div>
+        <p v-if="overviewError" role="alert" class="rounded-lg border border-red-300 p-3 text-sm text-red-700">{{ overviewError }} <button type="button" class="underline" @click="loadOverview">Retry</button></p>
+        <p v-if="overviewLoading && !overview" class="text-sm text-[#536273]">Loading event statistics…</p>
+        <div v-if="overview" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div class="panel space-y-1"><p class="text-xs text-[#536273]">Photos</p><p class="text-3xl font-bold text-[#0C1D2D]">{{ overview.photos }}</p></div>
+          <div class="panel space-y-1"><p class="text-xs text-[#536273]">Videos</p><p class="text-3xl font-bold text-[#0C1D2D]">{{ overview.videos }}</p></div>
+          <div class="panel space-y-1"><p class="text-xs text-[#536273]">Awaiting review</p><p class="text-3xl font-bold text-[#0C1D2D]">{{ overview.pending }}</p></div>
+          <div class="panel space-y-1"><p class="text-xs text-[#536273]">Approved</p><p class="text-3xl font-bold text-[#0C1D2D]">{{ overview.approved }}</p></div>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <div class="panel space-y-2">
+            <h3 class="font-semibold text-[#0C1D2D]">Guest uploads</h3>
+            <p class="text-sm font-semibold" :class="overview?.uploadState==='open'?'text-[#336A57]':'text-[#90612E]'">{{ overview ? uploadStatusLabel : 'Checking…' }}</p>
+            <p v-if="overview?.uploadStartsAt" class="text-xs text-[#536273]">Opens: {{ new Date(overview.uploadStartsAt).toLocaleString('en-AU') }}</p>
+            <p v-if="overview?.uploadEndsAt" class="text-xs text-[#536273]">Closes: {{ new Date(overview.uploadEndsAt).toLocaleString('en-AU') }}</p>
+            <p v-if="overview && !overview.uploadEndsAt" class="text-xs text-[#536273]">No closing date set</p>
+          </div>
+          <div class="panel space-y-2">
+            <h3 class="font-semibold text-[#0C1D2D]">Storage at a glance</h3>
+            <p v-if="storageError" class="text-sm text-red-700">{{ storageError }}</p>
+            <template v-else-if="storage">
+              <p class="text-sm text-[#536273]">{{ formatBytes(storage.usedBytes) }} used of {{ formatBytes(storage.limitBytes) }}</p>
+              <div class="h-2 overflow-hidden rounded-full bg-[#E4D8C5]"><div class="h-full bg-[#B18A50]" :style="{width:`${usedPercent}%`}" /></div>
+              <p class="text-xs text-[#536273]">{{ formatBytes(remainingStorage) }} available<span v-if="reservedStorage"> · {{ formatBytes(reservedStorage) }} reserved for uploads</span></p>
+              <p v-if="storage.expiresAt" class="text-xs text-[#536273]">Storage expiry: {{ new Date(storage.expiresAt).toLocaleDateString('en-AU') }}</p>
+            </template>
+            <p v-else class="text-sm text-[#536273]">Loading storage…</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">Manage media →</NuxtLink>
+          <NuxtLink :to="`/dashboard/events/${event.id}/sign`" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">QR signs →</NuxtLink>
+          <NuxtLink :to="`/dashboard/events/${event.id}/packages`" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">Package &amp; storage →</NuxtLink>
+          <a v-if="guestUrl" :href="guestUrl" target="_blank" rel="noopener noreferrer" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">Guest upload page ↗</a>
+        </div>
+      </section>
       <section class="panel space-y-4" aria-label="Event package and storage">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div><h2 class="text-xl font-semibold text-[#0C1D2D]">Event Package &amp; Storage</h2><p class="text-sm text-[#536273]">Your current package and original media storage.</p></div>
