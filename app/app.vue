@@ -14,38 +14,44 @@ const showAccountNavigation = computed(() => {
 
 // Sign out
 const client = useSupabaseClient()
-// Keep the navigation hidden until both authentication and staff permissions
-// have been resolved. Display the complete menu in one render.
+// Resolve the menu from the reactive Supabase session, not a one-time
+// getSession() snapshot. A session can arrive after the user ref hydrates.
+const session = useSupabaseSession()
 const staffRole = ref<string|null>(null)
 const navigationReady = ref(false)
 let navigationRequest = 0
 
-watch(user, async (current) => {
-  const request = ++navigationRequest
-  navigationReady.value = false
-  staffRole.value = null
-
-  if (!current) {
-    navigationReady.value = true
-    return
-  }
-
-  try {
-    const { data: session } = await client.auth.getSession()
-    if (request !== navigationRequest) return
-    if (session.session?.user.id !== current.id) return
-    const result = await $fetch<{ allowed: boolean; role: string|null }>('/api/admin/me', {
-      headers: { Authorization: `Bearer ${session.session.access_token}` }
-    })
-    if (request !== navigationRequest) return
-    staffRole.value = result.allowed ? result.role : null
-  } catch {
-    if (request !== navigationRequest) return
+watch(
+  [() => user.value?.id ?? null, () => session.value?.access_token ?? null],
+  async ([userId, token]) => {
+    const request = ++navigationRequest
+    navigationReady.value = false
     staffRole.value = null
-  } finally {
-    if (request === navigationRequest) navigationReady.value = true
-  }
-}, { immediate: true })
+
+    if (!userId) {
+      navigationReady.value = true
+      return
+    }
+
+    // During Supabase hydration the user may arrive before the token.
+    // Wait for the reactive session to update, then re-run this watcher.
+    if (!token) { navigationReady.value = true; return }
+
+    try {
+      const result = await $fetch<{ allowed: boolean; role: string|null }>('/api/admin/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (request !== navigationRequest) return
+      staffRole.value = result.allowed ? result.role : null
+    } catch (err) {
+      if (request !== navigationRequest) return
+      console.error('Unable to resolve staff navigation', err)
+    } finally {
+      if (request === navigationRequest) navigationReady.value = true
+    }
+  },
+  { immediate: true }
+)
 
 async function signOut() {
   await client.auth.signOut()
