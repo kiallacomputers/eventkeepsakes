@@ -22,13 +22,13 @@ onMounted(async () => {
     <div v-else-if="allowed">
       <h1 class="text-3xl font-bold">Administration</h1>
       <p class="text-[#536273] mt-4">Manage EventKeepsakes settings and business operations.</p>
-      <div class="mt-6 flex flex-wrap gap-3">
+      <div class="mt-6 flex flex-wrap gap-3">\n        <NuxtLink to="/admin/support" class="btn">Customer &amp; Event Support</NuxtLink>
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/packages" class="btn">Manage Packages</NuxtLink>
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/finance" class="btn">Financial Dashboard</NuxtLink>
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/retention" class="btn">Retention &amp; Recovery</NuxtLink>
       <NuxtLink v-if="role==='superadmin'" to="/admin/staff" class="btn">Manage Staff</NuxtLink>
       </div>
-      <p v-if="role==='admin'" class="mt-5 text-sm text-[#536273]">Your Admin access is active. Operational staff tools will appear here as they are implemented; SuperAdmin financial and system settings are restricted.</p>
+      <p v-if="role==='admin'" class="mt-5 text-sm text-[#536273]">Your Admin access is active. Use Customer &amp; Event Support for customer assistance; financial and system settings are restricted.</p>
     </div>
     <div v-else class="panel"><h1 class="text-2xl font-bold">Access denied</h1><p class="text-[#536273] mt-3">This account is not authorised as staff.</p></div>
   </div>
