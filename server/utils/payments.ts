@@ -13,16 +13,26 @@ export function paymentOrigin(event:any) {
  if (url.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && url.hostname==='localhost')) throw createError({statusCode:503,statusMessage:'Invalid site URL'})
  return url.origin
 }
-export async function isSuperAdmin(userId: string): Promise<boolean> {
- const allow = (process.env.EVENTKEEPSAKES_ADMIN_USER_IDS || '').split(',').map(x=>x.trim()).filter(Boolean)
- if (allow.includes(userId)) return true
- const { data, error } = await adminDb().from('profiles').select('role').eq('id', userId).maybeSingle()
- if (error) throw createError({statusCode:500,statusMessage:'Unable to verify administrator role'})
- return data?.role === 'superadmin'
+export async function staffRole(userId:string):Promise<'admin'|'superadmin'|null>{
+ const allow=(process.env.EVENTKEEPSAKES_ADMIN_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean)
+ if(allow.includes(userId))return 'superadmin'
+ const db=adminDb()
+ const {data:staff,error:staffError}=await db.from('staff_members').select('role,active').eq('user_id',userId).maybeSingle()
+ if(staffError)throw createError({statusCode:500,statusMessage:'Staff roles unavailable. Apply migration 011.'})
+ if(staff)return staff.active?(staff.role==='superadmin'?'superadmin':'admin'):null
+ const {data:profile,error}=await db.from('profiles').select('role').eq('id',userId).maybeSingle()
+ if(error)throw createError({statusCode:500,statusMessage:'Unable to verify administrator role'})
+ return profile?.role==='superadmin'?'superadmin':null
 }
-export async function requirePackageAdmin(event:any) {
- const userId = await ownerUser(event)
- if (!(await isSuperAdmin(userId))) throw createError({statusCode:403,statusMessage:'Administrator access required'})
+export async function isSuperAdmin(userId:string):Promise<boolean>{return (await staffRole(userId))==='superadmin'}
+export async function requireStaff(event:any){
+ const userId=await ownerUser(event),role=await staffRole(userId)
+ if(!role)throw createError({statusCode:403,statusMessage:'Staff access required'})
+ return {userId,role}
+}
+export async function requirePackageAdmin(event:any){
+ const userId=await ownerUser(event)
+ if(!(await isSuperAdmin(userId)))throw createError({statusCode:403,statusMessage:'SuperAdmin access required'})
  return userId
 }
 export async function activePlans() {

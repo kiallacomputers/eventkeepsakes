@@ -1,6 +1,6 @@
-import { ownerUser } from '../../utils/media'
-import { isSuperAdmin } from '../../utils/payments'
-export default defineEventHandler(async event => {
- const userId = await ownerUser(event)
- return { allowed: await isSuperAdmin(userId) }
+import {ownerUser} from '../../utils/media'
+import {staffRole} from '../../utils/payments'
+export default defineEventHandler(async event=>{
+ const role=await staffRole(await ownerUser(event))
+ return {allowed:!!role,role,isSuperAdmin:role==='superadmin'}
 })

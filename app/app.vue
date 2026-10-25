@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 const route = useRoute()
 const user = useSupabaseUser()
@@ -15,17 +14,17 @@ const showAccountNavigation = computed(() => {
 
 // Sign out
 const client = useSupabaseClient()
-const isSuperAdmin = ref(false)
+const staffRole = ref<string|null>(null)
 watch(user, async (current) => {
-  isSuperAdmin.value = false
+  staffRole.value = null
   if (!current) return
   try {
     const { data: session } = await client.auth.getSession()
-    const result = await $fetch<{ allowed: boolean }>('/api/admin/me', {
+    const result = await $fetch<{ allowed: boolean; role: string|null }>('/api/admin/me', {
       headers: { Authorization: `Bearer ${session.session?.access_token || ''}` }
     })
-    isSuperAdmin.value = result.allowed
-  } catch { isSuperAdmin.value = false }
+    staffRole.value = result.role
+  } catch { staffRole.value = null }
 }, { immediate: true })
 
 async function signOut() {
@@ -76,7 +75,7 @@ async function signOut() {
             Dashboard
           </NuxtLink>
 
-          <NuxtLink v-if="isSuperAdmin" to="/admin" class="text-sm font-medium text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="!text-[#B18A50]">SuperAdmin</NuxtLink>
+          <NuxtLink v-if="staffRole" to="/admin" class="text-sm font-medium text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="!text-[#B18A50]">{{staffRole==='superadmin'?'SuperAdmin':'Staff Admin'}}</NuxtLink>
           <NuxtLink
             to="/account"
             class="text-sm font-medium text-[#0C1D2D]
