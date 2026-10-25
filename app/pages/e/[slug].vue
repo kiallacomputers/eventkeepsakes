@@ -19,11 +19,22 @@ function removeFile(key:string){const idx=uploads.value.findIndex(x=>x.key===key
 function friendlyUploadError(e:any){const message=String(e?.data?.statusMessage||e?.message||'Upload failed');if(/storage limit/i.test(message))return 'This event has reached its storage limit. Please contact the event organiser.';if(/unsupported file type or file size/i.test(message))return 'This file type or size is not supported. Photos must be 20 MB or less and videos 100 MB or less.';return message}
 
 const now=ref(Date.now())
+const galleryFilter=ref<'all'|'image'|'video'>('all')
+const visibleMedia=computed(()=>media.value.filter(m=>galleryFilter.value==='all'||m.media_type===galleryFilter.value))
+const touchStartX=ref<number|null>(null)
+function onViewerTouchStart(e:TouchEvent){touchStartX.value=e.changedTouches[0]?.clientX??null}
+function onViewerTouchEnd(e:TouchEvent){
+ if(touchStartX.value===null)return
+ const delta=(e.changedTouches[0]?.clientX??touchStartX.value)-touchStartX.value
+ touchStartX.value=null
+ if(Math.abs(delta)>65)shiftMedia(delta<0?1:-1)
+}
+watch(galleryFilter,()=>{activeMedia.value=null})
 const activeMedia=ref<number|null>(null)
-const viewing=computed(()=>activeMedia.value===null?null:media.value[activeMedia.value]||null)
+const viewing=computed(()=>activeMedia.value===null?null:visibleMedia.value[activeMedia.value]||null)
 function openMedia(index:number){activeMedia.value=index}
 function closeMedia(){activeMedia.value=null}
-function shiftMedia(delta:number){if(activeMedia.value!==null&&media.value.length)activeMedia.value=(activeMedia.value+delta+media.value.length)%media.value.length}
+function shiftMedia(delta:number){if(activeMedia.value!==null&&visibleMedia.value.length)activeMedia.value=(activeMedia.value+delta+visibleMedia.value.length)%visibleMedia.value.length}
 function galleryKeydown(e:KeyboardEvent){if(activeMedia.value===null)return;if(e.key==='Escape')closeMedia();else if(e.key==='ArrowRight')shiftMedia(1);else if(e.key==='ArrowLeft')shiftMedia(-1)}
 let timer:ReturnType<typeof setInterval>|undefined
 const canUpload=computed(()=>item.value?.status==='active'&&(!item.value.upload_starts_at||now.value>=Date.parse(item.value.upload_starts_at))&&(!item.value.upload_ends_at||now.value<=Date.parse(item.value.upload_ends_at)))
@@ -159,10 +170,14 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
      <div class="flex items-center justify-between gap-3"><h2 class="text-2xl font-semibold">Shared gallery</h2><button type="button" class="text-[#90612E]" @click="loadGallery">Refresh</button></div>
      <p v-if="galleryError" class="text-red-700">{{galleryError}}</p>
      <p v-else-if="!media.length" class="text-[#536273]">No approved photos or videos yet.</p>
-     <div v-else class="grid grid-cols-2 gap-4 md:grid-cols-3">
-      <div v-for="m in media" :key="m.id" class="space-y-2">
-       <button v-if="m.media_type==='image'" type="button" class="relative block w-full overflow-hidden rounded-lg" :aria-label="`View guest photo ${media.indexOf(m)+1}`" @click="openMedia(media.indexOf(m))"><img :src="m.url" alt="Guest event photo" class="aspect-square w-full rounded-lg object-cover" loading="lazy" /><MediaWatermark /></button>
-       <button v-else type="button" class="relative block w-full" :aria-label="`View guest video ${media.indexOf(m)+1}`" @click="openMedia(media.indexOf(m))"><video :src="m.url" preload="metadata" muted playsinline class="aspect-square w-full rounded-lg bg-black object-contain pointer-events-none" /><span class="absolute inset-0 flex items-center justify-center text-5xl text-white" aria-hidden="true">▶</span><MediaWatermark /></button>
+     <div v-if="media.length" class="flex flex-wrap gap-2" role="group" aria-label="Filter gallery">
+      <button v-for="f in [{value:'all',label:'All memories'},{value:'image',label:'Photos'},{value:'video',label:'Videos'}]" :key="f.value" type="button" class="rounded-full border px-4 py-2 text-sm font-semibold" :class="galleryFilter===f.value?'border-[#0C1D2D] bg-[#0C1D2D] text-white':'border-[#D6B077] text-[#0C1D2D]'" :aria-pressed="galleryFilter===f.value" @click="galleryFilter=f.value as any">{{f.label}}</button>
+     </div>
+     <p v-if="media.length&&!visibleMedia.length" class="text-sm text-[#536273]">No memories match this filter.</p>
+     <div v-if="visibleMedia.length" class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+      <div v-for="m in visibleMedia" :key="m.id" class="space-y-2">
+       <button v-if="m.media_type==='image'" type="button" class="relative block w-full overflow-hidden rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]" :aria-label="`View guest photo ${visibleMedia.indexOf(m)+1}`" @click="openMedia(visibleMedia.indexOf(m))"><img :src="m.url" alt="Guest event photo" class="aspect-square w-full rounded-lg object-cover" loading="lazy" /><MediaWatermark /></button>
+       <button v-else type="button" class="relative block w-full" :aria-label="`View guest video ${visibleMedia.indexOf(m)+1}`" @click="openMedia(visibleMedia.indexOf(m))"><video :src="m.url" preload="metadata" muted playsinline class="aspect-square w-full rounded-lg bg-black object-contain pointer-events-none" /><span class="absolute inset-0 flex items-center justify-center text-5xl text-white" aria-hidden="true">▶</span><MediaWatermark /></button>
        <p v-if="m.name" class="text-xs text-[#536273]">{{m.name}}</p>
        <a v-if="m.download" :href="m.url" target="_blank" rel="noopener" class="text-sm text-[#90612E]">Open / save</a>
       </div>
@@ -173,12 +188,19 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
   </div>
   <p v-else class="text-red-700">{{error||'Event not found'}}</p>
   <Teleport to="body">
-   <div v-if="viewing" class="fixed inset-0 z-[9000] flex items-center justify-center bg-[#081724]/95 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Guest media viewer" @click.self="closeMedia">
+   <div v-if="viewing" class="fixed inset-0 z-[9000] flex items-center justify-center bg-[#081724]/95 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Guest media viewer" @touchstart.passive="onViewerTouchStart" @touchend.passive="onViewerTouchEnd" @click.self="closeMedia">
     <div class="flex h-full w-full max-w-5xl flex-col items-center justify-center gap-3">
-     <div class="flex w-full items-center justify-between gap-3 text-white"><span class="text-sm">{{(activeMedia??0)+1}} of {{media.length}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="closeMedia">Close ×</button></div>
+     <div class="flex w-full items-center justify-between gap-3 text-white"><span class="text-sm">{{(activeMedia??0)+1}} of {{visibleMedia.length}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="closeMedia">Close ×</button></div>
      <div v-if="viewing.media_type==='image'" class="relative min-h-0 max-h-[72vh] max-w-full overflow-hidden rounded-lg"><img :src="viewing.url" alt="Enlarged guest event photo" class="max-h-[72vh] max-w-full object-contain" /><MediaWatermark /></div>
      <div v-else class="relative min-h-0 max-h-[72vh] max-w-full overflow-hidden rounded-lg bg-black"><video :key="viewing.id" :src="viewing.url" controls autoplay playsinline preload="metadata" class="max-h-[72vh] max-w-full">Your browser cannot play this video format.</video><MediaWatermark /></div>
      <div class="flex w-full items-center justify-between gap-4 text-white"><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(-1)">← Previous</button><span class="text-center text-sm">{{viewing.name||'Shared memory'}}</span><button type="button" class="rounded-lg border border-white/40 px-4 py-2" @click="shiftMedia(1)">Next →</button></div>
+     <div v-if="visibleMedia.length>1" class="flex max-w-full gap-2 overflow-x-auto py-2" aria-label="Gallery thumbnails">
+      <button v-for="(thumb,index) in visibleMedia" :key="thumb.id" type="button" class="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border-2" :class="activeMedia===index?'border-[#D6B077]':'border-transparent opacity-65'" :aria-label="`View item ${index+1}`" :aria-current="activeMedia===index?'true':undefined" @click="openMedia(index)">
+       <img v-if="thumb.media_type==='image'" :src="thumb.url" alt="" class="h-full w-full object-cover" loading="lazy" />
+       <span v-else class="flex h-full w-full items-center justify-center bg-[#25384B] text-white" aria-hidden="true">▶</span>
+      </button>
+     </div>
+     <p class="text-center text-xs text-white/70">Swipe left or right on mobile · Use arrow keys on desktop · Esc to close</p>
      <a v-if="viewing.download" :href="viewing.url" target="_blank" rel="noopener" class="rounded-lg bg-[#D6B077] px-5 py-2 font-semibold text-[#0C1D2D]">Open / save original</a>
     </div>
    </div>
