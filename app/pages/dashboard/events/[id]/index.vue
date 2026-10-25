@@ -48,6 +48,23 @@ async function loadStorage() {
  finally {storageLoading.value=false}
 }
 
+const appearance=ref({welcome_message:'',layout:'grid',theme:'classic',accent_color:'#B18A50',cover_media_id:null as string|null})
+const coverChoices=ref<any[]>([])
+const appearanceError=ref(''),appearanceSaving=ref(false)
+const accents:Record<string,string>={classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'}
+const previewAccent=computed(()=>appearance.value.theme==='custom'?appearance.value.accent_color:accents[appearance.value.theme]||accents.classic)
+async function loadAppearance(){try{
+ const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in required')
+ const headers={authorization:`Bearer ${session.access_token}`}
+ const [style,files]=await Promise.all([$fetch<any>('/api/owner/gallery-style',{query:{id:String(route.params.id)},headers}),$fetch<any>('/api/owner/media',{query:{id:String(route.params.id)},headers})])
+ appearance.value={...appearance.value,...style}
+ coverChoices.value=(files.media||[]).filter((m:any)=>m.media_type==='image'&&m.status==='approved')
+}catch(e:any){appearanceError.value=e?.data?.statusMessage||e?.message||'Unable to load gallery settings'}}
+async function saveAppearance(){if(appearanceSaving.value)return;appearanceSaving.value=true;appearanceError.value=''
+ try{const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in required')
+ await $fetch('/api/owner/gallery-style',{method:'PUT',headers:{authorization:`Bearer ${session.access_token}`},body:{id:String(route.params.id),...appearance.value}})
+ dialog.show('Gallery appearance saved.','success')
+ }catch(e:any){appearanceError.value=e?.data?.statusMessage||e?.message||'Unable to save gallery settings'}finally{appearanceSaving.value=false}}
 const guestUrl = computed(() => event.value ? `${windowOrigin.value}/e/${encodeURIComponent(event.value.slug)}` : '')
 const windowOrigin = ref('')
 const statusOptions = ['draft','active','paused','closed']
@@ -118,7 +135,7 @@ function downloadQr() {
   const a = document.createElement('a'); a.href = qrDataUrl.value; a.download = `eventkeepsakes-${event.value.slug}-qr.png`; a.click()
 }
 async function copyLink() { try { await navigator.clipboard.writeText(guestUrl.value); notice.value = 'Guest link copied.'; dialog.show(notice.value, 'success') } catch { error.value = 'Unable to copy. Select the link manually.' } }
-onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStorage(); loadOverview() })
+onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStorage(); loadOverview(); loadAppearance() })
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
@@ -173,6 +190,24 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
           <NuxtLink :to="`/dashboard/events/${event.id}/packages`" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">Package &amp; storage →</NuxtLink>
           <a v-if="guestUrl" :href="guestUrl" target="_blank" rel="noopener noreferrer" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">Guest upload page ↗</a>
         </div>
+      </section>
+      <section class="panel space-y-4" aria-label="Guest gallery appearance">
+       <h2 class="text-xl font-semibold">Guest gallery appearance</h2>
+       <p class="text-sm text-[#536273]">Personalise your guest experience. Preview updates as you edit; guests see saved changes.</p>
+       <p v-if="appearanceError" role="alert" class="text-red-700">{{appearanceError}}</p>
+       <label class="block text-sm font-semibold">Welcome message<textarea v-model="appearance.welcome_message" maxlength="500" rows="3" class="mt-1 w-full rounded-lg border border-[#D6B077] bg-white p-3" placeholder="Welcome to our event!" /></label>
+       <div class="grid gap-3 sm:grid-cols-2">
+        <label class="text-sm font-semibold">Gallery layout<select v-model="appearance.layout" class="mt-1 w-full rounded-lg border border-[#D6B077] bg-white p-3"><option value="grid">Grid</option><option value="masonry">Masonry</option></select></label>
+        <label class="text-sm font-semibold">Theme<select v-model="appearance.theme" class="mt-1 w-full rounded-lg border border-[#D6B077] bg-white p-3"><option value="classic">Classic</option><option value="wedding">Wedding</option><option value="birthday">Birthday</option><option value="corporate">Corporate</option><option value="custom">Custom</option></select></label>
+       </div>
+       <label v-if="appearance.theme==='custom'" class="flex items-center gap-3 text-sm">Custom accent colour<input v-model="appearance.accent_color" type="color" /></label>
+       <label class="block text-sm font-semibold">Event cover photo<select v-model="appearance.cover_media_id" class="mt-1 w-full rounded-lg border border-[#D6B077] bg-white p-3"><option :value="null">No cover photo</option><option v-for="m in coverChoices" :key="m.id" :value="m.id">{{m.original_name||m.id}}</option></select><span class="block text-xs font-normal text-[#536273]">Choose an approved event photo. The cover remains protected by gallery access and watermarking.</span></label>
+       <div class="rounded-xl border bg-[#FFFDF8] p-5 text-center space-y-2" :style="{borderColor:previewAccent}">
+        <p class="text-xs uppercase tracking-widest" :style="{color:previewAccent}">Live guest preview</p><h3 class="text-2xl font-bold">{{event.title}}</h3>
+        <p class="whitespace-pre-wrap text-sm">{{appearance.welcome_message||'Your welcome message appears here.'}}</p>
+        <p class="text-xs" :style="{color:previewAccent}">{{appearance.layout==='masonry'?'Masonry':'Grid'}} gallery · {{appearance.theme}} theme</p>
+       </div>
+       <button type="button" class="btn" :disabled="appearanceSaving" @click="saveAppearance">{{appearanceSaving?'Saving…':'Save gallery appearance'}}</button>
       </section>
       <section class="panel space-y-4" aria-label="Event package and storage">
         <div class="flex flex-wrap items-center justify-between gap-3">
