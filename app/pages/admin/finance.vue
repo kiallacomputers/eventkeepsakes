@@ -15,7 +15,7 @@ onMounted(async()=>{try{const {role}=await $fetch<{role:string}>('/api/admin/me'
 </script>
 <template>
 <main class="mx-auto max-w-6xl space-y-6 px-5 py-10">
- <NuxtLink to="/admin" class="ek-back-button inline-flex rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold">← Back to SuperAdmin</NuxtLink>
+ <NuxtLink to="/admin" class="ek-back-button inline-flex rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold">← Back to Administration</NuxtLink>
  <div><h1 class="text-3xl font-bold">EventKeepsakes Financial Dashboard</h1><p class="mt-2 text-sm text-[#536273]">Sales from completed package payments · operating estimates in Australian dollars</p></div>
  <p v-if="error" role="alert" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-700">{{error}}</p>
  <p v-if="loading">Loading financial dashboard…</p>

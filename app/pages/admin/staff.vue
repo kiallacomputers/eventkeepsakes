@@ -32,7 +32,7 @@ async function addMember(){await save(newId.value,newRole.value,true);if(!error.
 onMounted(load)
 </script>
 <template><main class="mx-auto max-w-5xl space-y-6 px-5 py-12">
-<NuxtLink to="/admin" class="btn inline-flex">← SuperAdmin</NuxtLink>
+<NuxtLink to="/admin" class="btn inline-flex">← Administration</NuxtLink>
 <h1 class="text-3xl font-bold">Manage Staff</h1>
 <p class="text-sm text-[#536273]">Assign Admin, Manager or SuperAdmin access to an existing registered EventKeepsakes user. Permissions are enforced on the server.</p>
 <p v-if="error" role="alert" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-700">{{error}}</p>

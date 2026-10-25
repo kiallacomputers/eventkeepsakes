@@ -63,7 +63,7 @@ onMounted(async()=>{try{const {role}=await $fetch<{role:string}>('/api/admin/me'
 </script>
 <template>
 <div class="mx-auto max-w-6xl px-5 py-12 space-y-6">
- <NuxtLink to="/admin" class="btn inline-flex">← SuperAdmin</NuxtLink>
+ <NuxtLink to="/admin" class="btn inline-flex">← Administration</NuxtLink>
  <div><h1 class="text-3xl font-bold">Retention &amp; Recovery</h1><p class="mt-2 text-[#536273]">Manage retention policies and review upcoming event expiries.</p></div>
  <NuxtLink to="/admin/retention-pricing" class="btn inline-flex">Manage paid extension prices →</NuxtLink>
  <p v-if="error" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800">{{error}}</p>

@@ -20,7 +20,7 @@ onMounted(async () => {
   <div class="mx-auto max-w-5xl px-5 py-16">
     <p v-if="loading">Checking administrator access…</p>
     <div v-else-if="allowed">
-      <h1 class="text-3xl font-bold">{{role==='superadmin'?'SuperAdmin':role==='manager'?'Manager Administration':'Staff Administration'}}</h1>
+      <h1 class="text-3xl font-bold">Administration</h1>
       <p class="text-[#536273] mt-4">Manage EventKeepsakes settings and business operations.</p>
       <div class="mt-6 flex flex-wrap gap-3">
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/packages" class="btn">Manage Packages</NuxtLink>
