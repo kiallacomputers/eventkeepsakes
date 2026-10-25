@@ -3,12 +3,25 @@ definePageMeta({middleware:'auth'})
 const client=useSupabaseClient(),dialog=useAppDialog()
 const staff=ref<any[]>([]),bootstrap=ref<string[]>([]),error=ref(''),busy=ref(false)
 const newId=ref(''),newRole=ref('admin')
+const users=ref<any[]>([]),userPage=ref(0),hasMore=ref(false),loadingUsers=ref(false),userFilter=ref('')
+const availableUsers=computed(()=>users.value.filter(u=>`${u.email} ${u.id}`.toLowerCase().includes(userFilter.value.toLowerCase())))
+async function loadUsers(reset=false){
+ if(loadingUsers.value)return
+ loadingUsers.value=true
+ try{
+  const page=reset?1:userPage.value+1
+  const result=await api<any>('/api/admin/users',{query:{page}})
+  users.value=reset?result.users:[...users.value,...result.users]
+  userPage.value=page;hasMore.value=result.hasMore
+ }catch(e:any){error.value=e?.data?.statusMessage||e.message}
+ finally{loadingUsers.value=false}
+}
 async function api<T>(url:string,options:any={}){
  const {data:{session}}=await client.auth.getSession()
  if(!session)throw new Error('Sign in required')
  return $fetch<T>(url,{...options,headers:{...options.headers,Authorization:`Bearer ${session.access_token}`}})
 }
-async function load(){error.value='';try{const r=await api<any>('/api/admin/staff');staff.value=r.staff;bootstrap.value=r.bootstrapUserIds}catch(e:any){error.value=e?.data?.statusMessage||e.message}}
+async function load(){error.value='';try{const r=await api<any>('/api/admin/staff');staff.value=r.staff;bootstrap.value=r.bootstrapUserIds;await loadUsers(true)}catch(e:any){error.value=e?.data?.statusMessage||e.message}}
 async function save(userId:string,role:string,active:boolean){
  if(!(await dialog.confirm(`Save ${role} access as ${active?'active':'disabled'} for ${userId}?`,'Confirm staff access')))return
  busy.value=true;error.value=''
@@ -24,10 +37,20 @@ onMounted(load)
 <p class="text-sm text-[#536273]">Assign Admin, Manager or SuperAdmin access to an existing registered EventKeepsakes user. Permissions are enforced on the server.</p>
 <p v-if="error" role="alert" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-700">{{error}}</p>
 <section class="panel space-y-3"><h2 class="text-xl font-semibold">Add existing user</h2>
-<label class="block text-sm">Supabase Auth User UUID<input v-model.trim="newId" class="input mt-2 w-full" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></label>
+<label class="block text-sm">Find a registered user<input v-model="userFilter" class="input mt-2 w-full" placeholder="Filter loaded users by email or ID"/></label>
+<label class="block text-sm">Select user
+<select v-model="newId" class="input mt-2 w-full">
+<option value="">Choose a user…</option>
+<option v-for="u in availableUsers" :key="u.id" :value="u.id" :disabled="u.assigned">
+{{u.email}} — {{u.assigned?`Already assigned (${u.role}${u.active===false?', inactive':''})`:'Available'}}</option>
+</select></label>
+<div class="flex flex-wrap items-center gap-3 text-xs text-[#536273]">
+<span>{{users.length}} registered users loaded; assigned staff are labelled and unavailable for new assignment.</span>
+<button v-if="hasMore" class="btn" :disabled="loadingUsers" @click="loadUsers()">{{loadingUsers?'Loading…':'Load more users'}}</button>
+</div>
 <label class="block text-sm">Role<select v-model="newRole" class="input mt-2 w-full"><option value="admin">Admin</option><option value="manager">Manager</option><option value="superadmin">SuperAdmin</option></select></label>
 <button class="btn" :disabled="busy||!newId" @click="addMember">Add staff member</button>
-<p class="text-xs text-[#536273]">The person must already have a customer account. Find their User UUID in Supabase Authentication → Users. This page does not create accounts or send invitations.</p></section>
+<p class="text-xs text-[#536273]">Only registered accounts appear. Already assigned users are labelled and disabled; edit their role under Current staff below. For large user lists, use Load more users.</p></section>
 <section class="panel space-y-3"><h2 class="text-xl font-semibold">Current staff</h2>
 <p v-if="!staff.length" class="text-sm">No database-managed staff yet. Existing bootstrap SuperAdmins are shown below.</p>
 <div v-for="s in staff" :key="s.user_id" class="border-t py-3 space-y-2"><p class="font-semibold">{{s.email}}</p><p class="text-xs break-all text-[#536273]">{{s.user_id}}</p>
