@@ -10,8 +10,15 @@ export default defineEventHandler(async event=>{
   .select('id,event_id,plan_id,amount_cents,currency,paid_at')
   .order('paid_at',{ascending:false}).limit(10000)
  if(error)throw createError({statusCode:500,statusMessage:'Could not load paid transactions'})
+ const {data:extensions,error:extensionError}=await db.from('event_retention_extension_payments')
+  .select('id,event_id,extension_plan_id,amount_cents,currency,paid_at')
+  .order('paid_at',{ascending:false}).limit(10000)
+ if(extensionError)throw createError({statusCode:500,statusMessage:'Could not load retention extension revenue'})
  const now=new Date(),year=now.getUTCFullYear(),rate=Number(settings.usd_to_aud)
- const annual=(payments||[]).filter(p=>p.paid_at&&new Date(p.paid_at).getUTCFullYear()===year)
+ const extensionAnnual=(extensions||[]).filter(p=>p.paid_at&&new Date(p.paid_at).getUTCFullYear()===year)
+ const extensionConverted=extensionAnnual.map(p=>({...p,aud:audFromCents(Number(p.amount_cents),String(p.currency),rate)}))
+ const extensionRevenue=extensionConverted.reduce((sum,p)=>sum+Number(p.aud||0),0)
+ const annual=[...(payments||[]),...extensionAnnual.map(p=>({...p,plan_id:`retention:${p.extension_plan_id}`}))].filter(p=>p.paid_at&&new Date(p.paid_at).getUTCFullYear()===year)
  const converted=annual.map(p=>({...p,aud:audFromCents(Number(p.amount_cents),String(p.currency),rate)}))
  const recognized=converted.filter(p=>p.aud!==null)
  const excluded=converted.filter(p=>p.aud===null)
@@ -33,5 +40,5 @@ export default defineEventHandler(async event=>{
   const k=p.plan_id||'unknown';acc[k]??={planId:k,sales:0,revenue:0};acc[k].sales++;acc[k].revenue+=Number(p.aud);return acc
  },{}))
  // Storage usage is deliberately not inferred from purchased quotas.
- return {settings,year,summary:{revenue,sales,stripeFees,variable,gst,fixedYear,profit,breakEven,avgContribution,excludedCurrencies:excluded.length,hasMorePayments:(payments||[]).length===10000},months,byPlan,notes:['Payment fees are estimates based on editable settings, not reconciled Stripe fees.','Refunds, chargebacks and taxes are not reconciled in this report.','Storage overage is not included until actual Railway usage is connected.','Revenue covers only the first 10,000 fetched payment rows.']}
+ return {settings,year,summary:{extensionRevenue,extensionSales:extensionAnnual.length,revenue,sales,stripeFees,variable,gst,fixedYear,profit,breakEven,avgContribution,excludedCurrencies:excluded.length,hasMorePayments:(payments||[]).length===10000},months,byPlan,notes:['Payment fees are estimates based on editable settings, not reconciled Stripe fees.','Refunds, chargebacks and taxes are not reconciled in this report.','Storage overage is not included until actual Railway usage is connected.','Revenue covers only the first 10,000 fetched rows of each payment type.']}
 })

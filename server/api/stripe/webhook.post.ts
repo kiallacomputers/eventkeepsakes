@@ -15,6 +15,22 @@ export default defineEventHandler(async event=>{
  const session=stripeEvent.data.object as Stripe.Checkout.Session
  if(session.mode!=='payment'||session.payment_status!=='paid') return {received:true}
  const meta=session.metadata||{}
+ if(meta.kind==='retention_extension'){
+  const eventId=meta.eventId||'',ownerId=meta.ownerId||'',planId=meta.extensionPlanId||''
+  const days=Number(meta.extensionDays),amount=Number(meta.amountCents),currency=(meta.currency||'').toUpperCase()
+  if(!/^[0-9a-f-]{36}$/i.test(eventId)||!/^[0-9a-f-]{36}$/i.test(ownerId)||
+   !/^[a-z0-9_-]{1,60}$/.test(planId)||!Number.isInteger(days)||days<1||days>3650||
+   !Number.isSafeInteger(amount)||amount<=0||!/^[A-Z]{3}$/.test(currency)||
+   session.amount_total!==amount||session.currency?.toUpperCase()!==currency||session.client_reference_id!==eventId)
+   throw createError({statusCode:400,statusMessage:'Invalid retention checkout metadata'})
+  const {error}=await adminDb().rpc('activate_event_retention_extension_payment',{
+   p_session_id:session.id,p_payment_intent_id:typeof session.payment_intent==='string'?session.payment_intent:null,
+   p_event_id:eventId,p_owner_id:ownerId,p_extension_plan_id:planId,p_extension_days:days,
+   p_amount_cents:amount,p_currency:currency
+  })
+  if(error){console.error('Retention activation failed',error.message);throw createError({statusCode:500,statusMessage:'Could not activate retention extension'})}
+  return {received:true}
+ }
  const eventId=meta.eventId||'',ownerId=meta.ownerId||'',planId=meta.planId||''
  const amount=Number(meta.amountCents),bytes=Number(meta.storageLimitBytes),days=Number(meta.retentionDays)
  const currency=(meta.currency||'').toUpperCase()
