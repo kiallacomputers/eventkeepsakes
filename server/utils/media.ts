@@ -47,7 +47,7 @@ export async function ownerUser(event:any) {
  return data.user.id
 }
 export async function eventBySlug(slug:string) {
- const {data,error}=await adminDb().from('events').select('id,owner_id,title,slug,status,pin_enabled,upload_starts_at,upload_ends_at,gallery_visibility,guest_downloads_enabled,guest_name_mode,show_contributor_names,moderation_enabled').eq('slug',slug).maybeSingle()
+ const {data,error}=await adminDb().from('events').select('id,owner_id,title,slug,status,pin_enabled,upload_starts_at,upload_ends_at,gallery_visibility,guest_downloads_enabled,guest_name_mode,show_contributor_names,moderation_enabled,cover_path,welcome_message,gallery_layout,gallery_theme,gallery_accent').eq('slug',slug).maybeSingle()
  if(error) throw createError({statusCode:500,statusMessage:'Could not load event'})
  if(!data) throw createError({statusCode:404,statusMessage:'Event not found'})
  return data

@@ -14,6 +14,15 @@ const message=ref('Help us capture every special moment! Scan the QR code to sha
 const paper=ref<'A4'|'A5'>('A4')
 const theme=ref<'classic'|'romance'|'modern'>('classic')
 const showDate=ref(true)
+const coverUrl=ref<string|null>(null),posterCover=ref<string|null>(null),useCover=ref(false)
+const posterName=ref('Welcome poster'),savedPosters=ref<any[]>([]),posterBusy=ref(false),posterError=ref('')
+async function posterAuth(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in again');return {authorization:`Bearer ${session.access_token}`}}
+async function loadPosterAssets(){try{const headers=await posterAuth();const [branding,posters]=await Promise.all([$fetch<any>('/api/owner/branding',{query:{id:String(route.params.id)},headers}),$fetch<any>('/api/owner/posters',{query:{id:String(route.params.id)},headers})]);coverUrl.value=branding.cover_url;savedPosters.value=posters.designs}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}}
+async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
+const loadedSavedPoster=ref(false)
+const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
+
 const guestUrl=computed(()=>item.value?`${origin.value}/e/${encodeURIComponent(item.value.slug)}`:'')
 const dateLabel=computed(()=>item.value?.event_date?new Date(`${item.value.event_date}T12:00:00`).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}):'')
 useHead({title:'Welcome Sign Designer · EventKeepsakes'})
@@ -22,6 +31,7 @@ onMounted(async()=>{
  const {data,error:err}=await client.from('events').select('id,title,slug,event_date').eq('id',String(route.params.id)).single()
  if(err)error.value=err.message
  else {item.value=data;qr.value=await QRCode.toDataURL(guestUrl.value,{width:1000,margin:3,errorCorrectionLevel:'H',color:{dark:'#0C1D2D',light:'#FFFFFF'}})}
+ await loadPosterAssets()
  loading.value=false
 })
 function printSign(){window.print()}
@@ -39,13 +49,19 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
     <label class="block text-sm font-medium">Message<textarea v-model="message" maxlength="260" rows="4" class="input mt-2" /></label>
     <label class="flex items-center gap-2 text-sm"><input v-model="showDate" type="checkbox" /> Show event date</label>
+    <label class="flex items-center gap-2 text-sm"><input v-model="useCover" type="checkbox" /> Use event cover photo in poster</label>
+    <p class="text-xs text-[#536273]">A saved poster keeps its own cover snapshot even if you later replace the event cover.</p>
+    <label class="block text-sm">Design name<input v-model="posterName" maxlength="80" class="input mt-2" /></label>
+    <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
+    <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
+    <label v-if="savedPosters.length" class="block text-sm">Saved designs<select class="input mt-2" @change="openSavedPoster(savedPosters.find(p=>p.id===($event.target as HTMLSelectElement).value))"><option value="">Choose saved design</option><option v-for="p in savedPosters" :key="p.id" :value="p.id">{{p.name}}</option></select></label>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">Select “Save as PDF” in your browser print dialog to download a printable sign. For best results, enable background graphics and disable browser headers/footers.</p>
    </section>
    <div class="ek-sign-stage flex justify-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
     <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4']" aria-label="Printable event welcome sign">
-      <div class="ek-sign-inner">
+      <div class="ek-sign-inner" :style="activePosterCover?{backgroundImage:`linear-gradient(#ffffffc9,#ffffffd9),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
        <div class="ek-sign-tagline">CAPTURE · SHARE · REMEMBER</div>
        <div class="ek-sign-ornament">✦ &nbsp; ✦ &nbsp; ✦</div>
