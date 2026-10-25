@@ -13,44 +13,57 @@ const showAccountNavigation = computed(() => {
 })
 
 // Sign out
+// Wait for Supabase to finish restoring its browser session before revealing
+// the account menu. Staff permissions are always verified by the server.
 const client = useSupabaseClient()
-// Resolve the menu from the reactive Supabase session, not a one-time
-// getSession() snapshot. A session can arrive after the user ref hydrates.
 const session = useSupabaseSession()
-const staffRole = ref<string|null>(null)
+const staffRole = ref<'admin'|'manager'|'superadmin'|null>(null)
 const navigationReady = ref(false)
-let navigationRequest = 0
+let lookupSequence = 0
 
 watch(
   [() => user.value?.id ?? null, () => session.value?.access_token ?? null],
-  async ([userId, token]) => {
-    const request = ++navigationRequest
+  async ([userId, accessToken]) => {
+    const sequence = ++lookupSequence
     navigationReady.value = false
     staffRole.value = null
 
     if (!userId) {
+      // No logged-in user: render public navigation immediately.
       navigationReady.value = true
       return
     }
 
-    // During Supabase hydration the user may arrive before the token.
-    // Wait for the reactive session to update, then re-run this watcher.
-    if (!token) { navigationReady.value = true; return }
+    // Supabase can hydrate user and session at different moments.
+    // Use getSession as a fallback; a subsequent reactive update reruns this watcher.
+    let token = accessToken
+    if (!token) {
+      try {
+        const {data} = await client.auth.getSession()
+        token = data.session?.access_token ?? null
+      } catch { /* handle below */ }
+    }
+    if (sequence !== lookupSequence) return
+    if (!token) {
+      // Never show a guessed staff role. The user can retry by reauthenticating.
+      navigationReady.value = true
+      return
+    }
 
     try {
-      const result = await $fetch<{ allowed: boolean; role: string|null }>('/api/admin/me', {
-        headers: { Authorization: `Bearer ${token}` }
+      const result = await $fetch<{allowed:boolean;role:'admin'|'manager'|'superadmin'|null}>('/api/admin/me', {
+        headers: {Authorization: `Bearer ${token}`}
       })
-      if (request !== navigationRequest) return
+      if (sequence !== lookupSequence) return
       staffRole.value = result.allowed ? result.role : null
-    } catch (err) {
-      if (request !== navigationRequest) return
-      console.error('Unable to resolve staff navigation', err)
+    } catch (error) {
+      if (sequence !== lookupSequence) return
+      console.error('Administration permission check failed', error)
     } finally {
-      if (request === navigationRequest) navigationReady.value = true
+      if (sequence === lookupSequence) navigationReady.value = true
     }
   },
-  { immediate: true }
+  {immediate:true}
 )
 
 async function signOut() {

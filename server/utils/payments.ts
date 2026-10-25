@@ -14,12 +14,21 @@ export function paymentOrigin(event:any) {
  return url.origin
 }
 export async function staffRole(userId:string):Promise<'admin'|'manager'|'superadmin'|null>{
- const allow=(process.env.EVENTKEEPSAKES_ADMIN_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean)
- if(allow.includes(userId))return 'superadmin'
+ // Netlify's original SuperAdmin allowlist takes precedence over database roles.
+ // This check is server-side only. Never expose this variable via public runtime config.
+ const allowedIds = (process.env.EVENTKEEPSAKES_ADMIN_USER_IDS || '')
+   .split(',').map(value=>value.trim()).filter(Boolean)
+ if (allowedIds.includes(userId)) return 'superadmin'
+
  const db=adminDb()
- const {data:staff,error:staffError}=await db.from('staff_members').select('role,active').eq('user_id',userId).maybeSingle()
- if(staffError)throw createError({statusCode:500,statusMessage:'Staff roles unavailable. Apply migration 011.'})
- if(staff)return staff.active?(staff.role==='superadmin'?'superadmin':staff.role==='manager'?'manager':'admin'):null
+ const {data:staff,error:staffError}=await db.from('staff_members')
+   .select('role,active').eq('user_id',userId).maybeSingle()
+ if(staffError)throw createError({statusCode:500,statusMessage:'Staff roles unavailable. Check migration 011.'})
+ if(staff){
+   if(!staff.active)return null
+   if(staff.role==='superadmin'||staff.role==='manager'||staff.role==='admin')return staff.role
+   return null
+ }
  const {data:profile,error}=await db.from('profiles').select('role').eq('id',userId).maybeSingle()
  if(error)throw createError({statusCode:500,statusMessage:'Unable to verify administrator role'})
  return profile?.role==='superadmin'?'superadmin':null
