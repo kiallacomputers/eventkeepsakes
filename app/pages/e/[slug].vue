@@ -5,7 +5,17 @@ const dialog=useAppDialog()
 const slug=String(route.params.slug)
 const item=ref<any>(null)
 const loading=ref(true),busy=ref(false),error=ref(''),notice=ref(''),pin=ref(''),unlocked=ref(false)
-const guestName=ref(''),files=ref<File[]>([]),media=ref<any[]>([]),galleryError=ref('')
+const guestName=ref(''),media=ref<any[]>([]),galleryError=ref('')
+type UploadState = { key:string; file:File; preview:string|null; state:'ready'|'uploading'|'uploaded'|'failed'; error:string }
+const uploads=ref<UploadState[]>([])
+const uploadDone=computed(()=>uploads.value.filter(x=>x.state==='uploaded').length)
+const uploadFailed=computed(()=>uploads.value.filter(x=>x.state==='failed').length)
+const uploadPercent=computed(()=>uploads.value.length?Math.round(uploadDone.value/uploads.value.length*100):0)
+const sizeLabel=(bytes:number)=>bytes>=1048576?`${(bytes/1048576).toFixed(1)} MB`:`${Math.round(bytes/1024)} KB`
+function cleanupPreviews(){for(const x of uploads.value)if(x.preview)URL.revokeObjectURL(x.preview)}
+function removeFile(key:string){const idx=uploads.value.findIndex(x=>x.key===key);if(idx<0||busy.value)return;const x=uploads.value[idx];if(x.preview)URL.revokeObjectURL(x.preview);uploads.value.splice(idx,1)}
+function friendlyUploadError(e:any){const message=String(e?.data?.statusMessage||e?.message||'Upload failed');if(/storage limit/i.test(message))return 'This event has reached its storage limit. Please contact the event organiser.';if(/unsupported file type or file size/i.test(message))return 'This file type or size is not supported. Photos must be 20 MB or less and videos 100 MB or less.';return message}
+
 const now=ref(Date.now())
 const activeMedia=ref<number|null>(null)
 const viewing=computed(()=>activeMedia.value===null?null:media.value[activeMedia.value]||null)
@@ -32,30 +42,41 @@ async function loadGallery(){galleryError.value='';try{
  const response=await $fetch<{media:any[]}>('/api/guest/gallery',{query:{slug}})
  media.value=response.media
 }catch(e:any){galleryError.value=e?.data?.statusMessage||'Unable to load gallery'}}
-function selected(e:Event){files.value=Array.from((e.target as HTMLInputElement).files||[])}
-async function upload(){
- if(!files.value.length||busy.value)return
- busy.value=true;error.value='';notice.value=''
- let completed=0
- try{
-  for(const file of files.value){
-   const {id,path,token}=await $fetch<{id:string,path:string,token:string}>('/api/guest/intent',{method:'POST',body:{slug,filename:file.name,mime:file.type,size:file.size,name:guestName.value}})
-   const {error:uploadError}=await client.storage.from('event-media').uploadToSignedUrl(path,token,file,{contentType:file.type,upsert:false})
-   if(uploadError) throw uploadError
-   await $fetch('/api/guest/finalize',{method:'POST',body:{slug,id}})
-   completed++
-  }
-  notice.value=`${completed} file(s) uploaded successfully.${item.value?.moderation_enabled?' Awaiting event holder approval.':''}`
-  dialog.show(notice.value, 'success', 'Memories uploaded')
-  files.value=[]
-  const picker=document.getElementById('guest-files') as HTMLInputElement|null
-  if(picker)picker.value=''
-  if(canBrowse.value)await loadGallery()
- }catch(e:any){error.value=`${completed} uploaded. ${e?.data?.statusMessage||e.message||'Upload failed'}`}
- finally{busy.value=false}
+function selected(e:Event){
+ const input=e.target as HTMLInputElement
+ const picked=Array.from(input.files||[])
+ for(const file of picked){
+  const key=`${file.name}:${file.size}:${file.lastModified}:${Math.random()}`
+  uploads.value.push({key,file,preview:file.type.startsWith('image/')?URL.createObjectURL(file):null,state:'ready',error:''})
+ }
+ input.value=''
 }
+async function uploadOne(x:UploadState){
+ x.state='uploading';x.error=''
+ try{
+  const file=x.file
+  const {id,path,token}=await $fetch<{id:string,path:string,token:string}>('/api/guest/intent',{method:'POST',body:{slug,filename:file.name,mime:file.type,size:file.size,name:guestName.value}})
+  const {error:uploadError}=await client.storage.from('event-media').uploadToSignedUrl(path,token,file,{contentType:file.type,upsert:false})
+  if(uploadError)throw uploadError
+  await $fetch('/api/guest/finalize',{method:'POST',body:{slug,id}})
+  x.state='uploaded'
+ }catch(e:any){x.state='failed';x.error=friendlyUploadError(e)}
+}
+async function upload(){
+ if(busy.value||!uploads.value.some(x=>x.state==='ready'||x.state==='failed'))return
+ busy.value=true;error.value='';notice.value=''
+ // Sequential uploads deliberately preserve existing server-side quota behaviour.
+ try{
+  for(const x of uploads.value){if(x.state==='ready'||x.state==='failed')await uploadOne(x)}
+  const failures=uploads.value.filter(x=>x.state==='failed')
+  if(failures.length){error.value=`${uploadDone.value} uploaded; ${failures.length} could not be uploaded. You can retry the failed files.`}
+  else if(uploadDone.value){notice.value=`${uploadDone.value} file(s) uploaded successfully.${item.value?.moderation_enabled?' Awaiting event holder approval.':''}`;dialog.show(notice.value,'success','Memories uploaded')}
+  if(canBrowse.value)await loadGallery()
+ }finally{busy.value=false}
+}
+function clearCompleted(){if(busy.value)return;for(const x of uploads.value.filter(x=>x.state==='uploaded'))if(x.preview)URL.revokeObjectURL(x.preview);uploads.value=uploads.value.filter(x=>x.state!=='uploaded')}
 onMounted(()=>{timer=setInterval(()=>now.value=Date.now(),30000);window.addEventListener('keydown',galleryKeydown);load()})
-onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydown',galleryKeydown)})
+onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydown',galleryKeydown);cleanupPreviews()})
 </script>
 <template>
  <main class="mx-auto max-w-4xl px-5 py-12 space-y-7">
@@ -70,16 +91,36 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     <button class="btn w-full" :disabled="busy">{{busy?'Checking…':'Enter event'}}</button>
    </form>
    <template v-else>
-    <section class="panel space-y-4">
-     <h2 class="text-2xl font-semibold">Share your memories</h2>
-     <p v-if="!canUpload" class="text-[#6F5433]">Uploads are currently closed. The organiser controls the upload window.</p>
+    <section class="panel space-y-5" aria-label="Guest memory uploads">
+     <div class="space-y-2 text-center">
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-[#987143]">Your memories matter</p>
+      <h2 class="text-2xl font-semibold text-[#0C1D2D]">Share your favourite moments</h2>
+      <p class="text-sm text-[#536273]">Add photos and videos from your phone or computer. No account needed.</p>
+     </div>
+     <p v-if="!canUpload" class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-[#6F5433]">Uploads are currently closed. The organiser controls the upload window.</p>
      <form v-else class="space-y-4" @submit.prevent="upload">
-      <label v-if="item.guest_name_mode!=='disabled'" class="block text-sm font-semibold">Your name {{item.guest_name_mode==='required'?'(required)':'(optional)'}}<input v-model="guestName" class="input mt-2" maxlength="120" :required="item.guest_name_mode==='required'" placeholder="Your name" /></label>
-      <label class="block text-sm font-semibold" for="guest-files">Photos and videos</label>
-      <input id="guest-files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm" multiple class="input" @change="selected" />
-      <p class="text-xs text-[#647080]">Photos up to 20 MB each; videos up to 100 MB each. Initial event storage allowance: 500 MB. Uploads may require organiser approval.</p>
-      <p v-if="files.length" class="text-sm">{{files.length}} file(s) selected</p>
-      <button class="btn" :disabled="busy||!files.length">{{busy?'Uploading…':'Upload memories'}}</button>
+      <label v-if="item.guest_name_mode!=='disabled'" class="block text-sm font-semibold" for="guest-name">Your name {{item.guest_name_mode==='required'?'(required)':'(optional)'}}
+       <input id="guest-name" v-model="guestName" class="input mt-2" maxlength="120" :required="item.guest_name_mode==='required'" placeholder="Your name" />
+      </label>
+      <label for="guest-files" class="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#D6B077] bg-[#FFFDF8] p-5 text-center transition hover:bg-[#F8F0E2] focus-within:ring-2 focus-within:ring-[#B18A50]">
+       <span class="text-3xl" aria-hidden="true">📷</span>
+       <span class="font-semibold text-[#0C1D2D]">Choose photos &amp; videos</span>
+       <span class="text-xs text-[#536273]">Select multiple files from your device</span>
+       <input id="guest-files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm" multiple class="sr-only" :disabled="busy" @change="selected" />
+      </label>
+      <p class="text-xs text-[#647080]">Photos up to 20 MB each · Videos up to 100 MB each · Uploads may require organiser approval.</p>
+      <div v-if="uploads.length" class="space-y-3" aria-live="polite">
+       <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold">Selected memories ({{uploads.length}})</h3><button v-if="uploadDone" type="button" class="text-sm font-medium text-[#90612E] underline" :disabled="busy" @click="clearCompleted">Clear completed</button></div>
+       <div v-for="x in uploads" :key="x.key" class="flex items-center gap-3 rounded-lg border border-[#E4D8C5] bg-white p-3">
+        <img v-if="x.preview" :src="x.preview" alt="Selected photo preview" class="h-14 w-14 shrink-0 rounded-md object-cover" />
+        <div v-else class="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-[#F8F4EB] text-2xl" aria-hidden="true">🎬</div>
+        <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold">{{x.file.name}}</p><p class="text-xs text-[#536273]">{{sizeLabel(x.file.size)}} · {{x.state==='ready'?'Ready to upload':x.state==='uploading'?'Uploading…':x.state==='uploaded'?'Uploaded successfully':'Upload failed'}}</p><p v-if="x.error" class="mt-1 text-xs text-red-700" role="alert">{{x.error}}</p></div>
+        <button v-if="x.state==='ready'||x.state==='failed'" type="button" class="rounded-md border border-[#D6B077] px-2 py-1 text-sm" :disabled="busy" :aria-label="`Remove ${x.file.name}`" @click="removeFile(x.key)">Remove</button>
+        <span v-else-if="x.state==='uploaded'" class="text-green-700" aria-label="Uploaded">✓</span>
+       </div>
+       <div class="space-y-1"><div class="flex justify-between text-xs text-[#536273]"><span>{{uploadDone}} of {{uploads.length}} completed</span><span>{{uploadPercent}}%</span></div><div class="h-2 overflow-hidden rounded-full bg-[#E4D8C5]" role="progressbar" :aria-valuenow="uploadDone" :aria-valuemax="uploads.length" aria-valuemin="0" aria-label="Files uploaded"><div class="h-full rounded-full bg-[#B18A50] transition-all" :style="{width:`${uploadPercent}%`}" /></div></div>
+      </div>
+      <button class="btn w-full" :disabled="busy||!uploads.some(x=>x.state==='ready'||x.state==='failed')">{{busy?'Uploading memories…':uploadFailed?'Retry failed uploads':'Upload memories'}}</button>
      </form>
     </section>
     <section v-if="item.gallery_visibility==='shared'" class="panel space-y-4">
