@@ -5,6 +5,12 @@ const dialog = useAppDialog()
 const eventId=String(route.params.id)
 const storage=ref<any>(null)
 const downloading=ref(false)
+const chosen=ref<string[]>([])
+const selectedCount=computed(()=>chosen.value.length)
+function toggleChosen(id:string){chosen.value=chosen.value.includes(id)?chosen.value.filter(x=>x!==id):[...chosen.value,id]}
+function selectVisible(){const ids=visibleMedia.value.map(x=>x.id);chosen.value=[...new Set([...chosen.value,...ids])]}
+function clearChosen(){chosen.value=[]}
+
 const media=ref<any[]>([]),busy=ref(false),error=ref(''),notice=ref('')
 const galleryFilter=ref<'all'|'image'|'video'>('all')
 const visibleMedia=computed(()=>media.value.filter(m=>galleryFilter.value==='all'||m.media_type===galleryFilter.value))
@@ -28,17 +34,17 @@ async function api<T>(path:string,options:any={}){
  if(!session)throw new Error('Please sign in again')
  return $fetch<T>(path,{...options,headers:{...options.headers,authorization:`Bearer ${session.access_token}`}})
 }
-async function downloadZip(){
- if(downloading.value)return
+async function downloadZip(selectedOnly=false){
+ if(downloading.value || (selectedOnly && !chosen.value.length))return
  downloading.value=true;error.value=''
  try{
   const {data:{session}}=await client.auth.getSession()
   if(!session)throw new Error('Please sign in again')
-  const response=await fetch('/api/owner/export',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({eventId})})
+  const response=await fetch('/api/owner/export',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({eventId,...(selectedOnly?{mediaIds:chosen.value}:{})})})
   if(!response.ok){const payload=await response.json().catch(()=>null);throw new Error(payload?.statusMessage||payload?.message||'Could not create ZIP download')}
   const blob=await response.blob()
   const url=URL.createObjectURL(blob)
-  const link=document.createElement('a');link.href=url;link.download=`eventkeepsakes-${eventId}-originals.zip`;document.body.appendChild(link);link.click();link.remove()
+  const link=document.createElement('a');link.href=url;link.download=`eventkeepsakes-${eventId}-${selectedOnly?'selected':'originals'}.zip`;document.body.appendChild(link);link.click();link.remove()
   setTimeout(()=>URL.revokeObjectURL(url),60000)
   dialog.show('Original photos and videos downloaded without watermarks.','success')
  }catch(e:any){error.value=e?.message||'ZIP download failed'}finally{downloading.value=false}
@@ -46,6 +52,7 @@ async function downloadZip(){
 async function load(){busy.value=true;error.value='';try{
  const data=await api<{media:any[]}>('/api/owner/media',{query:{id:eventId}})
  media.value=data.media
+  chosen.value=chosen.value.filter(id=>data.media.some(m=>m.id===id))
  storage.value=await api<any>('/api/owner/storage',{query:{id:eventId}})
 }catch(e:any){error.value=e?.data?.statusMessage||e.message}finally{busy.value=false}}
 async function change(mediaId:string,action:'approve'|'reject'|'delete'){

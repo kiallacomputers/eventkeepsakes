@@ -20,6 +20,39 @@ function friendlyUploadError(e:any){const message=String(e?.data?.statusMessage|
 
 const now=ref(Date.now())
 const galleryFilter=ref<'all'|'image'|'video'>('all')
+const galleryChosen=ref<string[]>([])
+const galleryDownloading=ref(false)
+const galleryDownloadError=ref('')
+const galleryShareNotice=ref('')
+function toggleGalleryChosen(id:string){galleryChosen.value=galleryChosen.value.includes(id)?galleryChosen.value.filter(x=>x!==id):[...galleryChosen.value,id]}
+function chooseVisible(){galleryChosen.value=[...new Set([...galleryChosen.value,...visibleMedia.value.map(x=>x.id)])]}
+async function downloadChosen(){
+ if(galleryDownloading.value||!galleryChosen.value.length)return
+ galleryDownloading.value=true;galleryDownloadError.value=''
+ try{
+  const response=await fetch('/api/guest/export',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',
+   body:JSON.stringify({slug,mediaIds:galleryChosen.value})})
+  if(!response.ok){const err=await response.json().catch(()=>null);throw new Error(err?.statusMessage||err?.message||'Download failed')}
+  const blob=await response.blob(),url=URL.createObjectURL(blob),a=document.createElement('a')
+  a.href=url;a.download='eventkeepsakes-selected-memories.zip';document.body.appendChild(a);a.click();a.remove()
+  setTimeout(()=>URL.revokeObjectURL(url),60000)
+ }catch(e:any){galleryDownloadError.value=e?.message||'Could not download selected memories'}
+ finally{galleryDownloading.value=false}
+}
+async function shareMemory(id:string){
+ const url=new URL(window.location.href);url.searchParams.set('memory',id)
+ try{
+  if(navigator.share)await navigator.share({title:item.value?.title||'EventKeepsakes memory',url:url.toString()})
+  else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url.toString());galleryShareNotice.value='Gallery link copied'}
+  else{galleryShareNotice.value='Copy this gallery link: '+url.toString()}
+ }catch(e:any){if(e?.name!=='AbortError')galleryShareNotice.value='Could not share link'}
+}
+function openLinkedMemory(){
+ const id=String(route.query.memory||'')
+ const index=media.value.findIndex(m=>m.id===id)
+ if(index>=0){galleryFilter.value='all';activeMedia.value=index}
+}
+
 const visibleMedia=computed(()=>media.value.filter(m=>galleryFilter.value==='all'||m.media_type===galleryFilter.value))
 const touchStartX=ref<number|null>(null)
 function onViewerTouchStart(e:TouchEvent){touchStartX.value=e.changedTouches[0]?.clientX??null}

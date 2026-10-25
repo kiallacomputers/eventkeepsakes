@@ -8,13 +8,23 @@ const safeName=(name:string)=>name.normalize('NFKC').replace(/[^a-zA-Z0-9._ -]/g
 export default defineEventHandler(async event => {
  const body=await readBody(event)
  const id=String(body?.eventId||'')
+ const selected=body?.mediaIds
+ if(selected!==undefined && (!Array.isArray(selected)||selected.length<1||selected.length>MAX_EXPORT_FILES||
+    selected.some((x:unknown)=>typeof x!=='string'||!/^[0-9a-f-]{36}$/i.test(x))||
+    new Set(selected).size!==selected.length))
+  throw createError({statusCode:400,statusMessage:'Choose valid unique media files'})
  const owner=await ownerEvent(event,id)
  const db=adminDb()
  // Export originals, including rejected media, but never incomplete reservations.
- const {data:media,error}=await db.from('event_media')
+ let query=db.from('event_media')
   .select('id,storage_path,original_name,size_bytes,status')
   .eq('event_id',id).neq('status','pending_upload').order('created_at',{ascending:true})
+ if(selected)query=query.in('id',selected)
+ // Fetch one extra record so complete-event export never silently truncates.
+ const {data:media,error}=await query.limit(MAX_EXPORT_FILES+1)
  if(error) throw createError({statusCode:500,statusMessage:'Could not prepare event export'})
+ if(selected && (media?.length!==selected.length))
+  throw createError({statusCode:400,statusMessage:'Some selected media are no longer available'})
  if(!media?.length) throw createError({statusCode:400,statusMessage:'No completed uploads to export'})
  const total=media.reduce((n:number,m:any)=>n+Number(m.size_bytes),0)
  if(media.length>MAX_EXPORT_FILES||total>MAX_EXPORT_BYTES)
