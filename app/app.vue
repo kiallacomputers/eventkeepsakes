@@ -14,17 +14,37 @@ const showAccountNavigation = computed(() => {
 
 // Sign out
 const client = useSupabaseClient()
+// Keep the navigation hidden until both authentication and staff permissions
+// have been resolved. Display the complete menu in one render.
 const staffRole = ref<string|null>(null)
+const navigationReady = ref(false)
+let navigationRequest = 0
+
 watch(user, async (current) => {
+  const request = ++navigationRequest
+  navigationReady.value = false
   staffRole.value = null
-  if (!current) return
+
+  if (!current) {
+    navigationReady.value = true
+    return
+  }
+
   try {
     const { data: session } = await client.auth.getSession()
+    if (request !== navigationRequest) return
+    if (session.session?.user.id !== current.id) return
     const result = await $fetch<{ allowed: boolean; role: string|null }>('/api/admin/me', {
-      headers: { Authorization: `Bearer ${session.session?.access_token || ''}` }
+      headers: { Authorization: `Bearer ${session.session.access_token}` }
     })
-    staffRole.value = result.role
-  } catch { staffRole.value = null }
+    if (request !== navigationRequest) return
+    staffRole.value = result.allowed ? result.role : null
+  } catch {
+    if (request !== navigationRequest) return
+    staffRole.value = null
+  } finally {
+    if (request === navigationRequest) navigationReady.value = true
+  }
 }, { immediate: true })
 
 async function signOut() {
@@ -35,6 +55,15 @@ async function signOut() {
 
 <template>
   <div class="min-h-screen bg-[#F8F4EB] text-[#0C1D2D]">
+    <!-- Render the page and its complete navigation together, never incrementally. -->
+    <div v-if="!navigationReady" class="min-h-screen" aria-busy="true">
+      <div class="border-b border-[#E4D8C5]">
+        <div class="mx-auto flex max-w-7xl items-center px-5 py-5 min-h-[90px]">
+          <span class="font-serif text-2xl font-bold">Event<span class="text-[#B18A50]">Keepsakes</span></span>
+        </div>
+      </div>
+    </div>
+    <template v-else>
 
     <!-- Main Header -->
     <header class="border-b border-[#E4D8C5] bg-[#F8F4EB]">
@@ -131,5 +160,6 @@ async function signOut() {
       </div>
     </footer>
 
+    </template>
   </div>
 </template>
