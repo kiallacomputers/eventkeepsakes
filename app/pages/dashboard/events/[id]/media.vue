@@ -88,9 +88,16 @@ onUnmounted(()=>window.removeEventListener('keydown',mediaKeydown))
     <button v-for="f in [{value:'all',label:'All'},{value:'image',label:'Photos'},{value:'video',label:'Videos'}]" :key="f.value" type="button" class="rounded-full border px-4 py-2 text-sm font-semibold" :class="galleryFilter===f.value?'border-[#0C1D2D] bg-[#0C1D2D] text-white':'border-[#D6B077] text-[#0C1D2D]'" :aria-pressed="galleryFilter===f.value" @click="galleryFilter=f.value as any">{{f.label}}</button>
    </div>
   </div>
+  <div v-if="media.length" class="panel flex flex-wrap items-center gap-3" aria-label="Selected media downloads">
+   <span class="text-sm font-semibold">{{selectedCount}} selected</span>
+   <button type="button" class="text-sm text-[#90612E] underline" @click="selectVisible">Select visible</button>
+   <button type="button" class="text-sm text-[#90612E] underline" :disabled="!selectedCount" @click="clearChosen">Clear selection</button>
+   <button type="button" class="btn text-sm" :disabled="!selectedCount||downloading||busy" @click="downloadZip(true)">{{downloading?'Preparing ZIP…':'Download selected ZIP'}}</button>
+  </div>
   <p v-if="media.length&&!visibleMedia.length" class="panel">No files match this filter.</p>
   <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
    <article v-for="m in visibleMedia" :key="m.id" class="panel space-y-3">
+    <label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" :checked="chosen.includes(m.id)" @change="toggleChosen(m.id)" /> Select for ZIP</label>
     <button v-if="m.url" type="button" class="relative block w-full" :aria-label="`View ${m.media_type==='image'?'photo':'video'} in browser`" @click="openMedia(visibleMedia.indexOf(m))">
      <img v-if="m.media_type==='image'" :src="m.url" alt="Uploaded event photo" class="aspect-video w-full rounded-lg object-cover" />
      <video v-else :src="m.url" preload="metadata" muted playsinline class="pointer-events-none aspect-video w-full rounded-lg bg-black object-contain" />

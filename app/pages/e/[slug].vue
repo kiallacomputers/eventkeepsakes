@@ -87,6 +87,8 @@ async function unlock(){busy.value=true;error.value='';try{
 async function loadGallery(){galleryError.value='';try{
  const response=await $fetch<{media:any[]}>('/api/guest/gallery',{query:{slug}})
  media.value=response.media
+ galleryChosen.value=galleryChosen.value.filter(id=>response.media.some(m=>m.id===id))
+ openLinkedMemory()
 }catch(e:any){galleryError.value=e?.data?.statusMessage||'Unable to load gallery'}}
 const allowedTypes = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif','video/mp4','video/quicktime','video/webm'])
 function addFiles(files:File[]){
@@ -206,13 +208,25 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
      <div v-if="media.length" class="flex flex-wrap gap-2" role="group" aria-label="Filter gallery">
       <button v-for="f in [{value:'all',label:'All memories'},{value:'image',label:'Photos'},{value:'video',label:'Videos'}]" :key="f.value" type="button" class="rounded-full border px-4 py-2 text-sm font-semibold" :class="galleryFilter===f.value?'border-[#0C1D2D] bg-[#0C1D2D] text-white':'border-[#D6B077] text-[#0C1D2D]'" :aria-pressed="galleryFilter===f.value" @click="galleryFilter=f.value as any">{{f.label}}</button>
      </div>
+     <div v-if="media.length && media.some(m=>m.download)" class="flex flex-wrap items-center gap-3 rounded-lg border border-[#D6B077] p-3">
+      <span class="text-sm font-semibold">{{galleryChosen.length}} selected</span>
+      <button type="button" class="text-sm text-[#90612E] underline" @click="chooseVisible">Select visible</button>
+      <button type="button" class="text-sm text-[#90612E] underline" @click="galleryChosen=[]">Clear selection</button>
+      <button type="button" class="btn text-sm" :disabled="!galleryChosen.length||galleryDownloading" @click="downloadChosen">{{galleryDownloading?'Preparing ZIP…':'Download selected ZIP'}}</button>
+     </div>
+     <p v-if="galleryDownloadError" role="alert" class="text-sm text-red-700">{{galleryDownloadError}}</p>
+     <p v-if="galleryShareNotice" role="status" class="break-all text-sm text-[#536273]">{{galleryShareNotice}}</p>
      <p v-if="media.length&&!visibleMedia.length" class="text-sm text-[#536273]">No memories match this filter.</p>
      <div v-if="visibleMedia.length" class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
       <div v-for="m in visibleMedia" :key="m.id" class="space-y-2">
+       <label v-if="m.download" class="flex items-center gap-2 text-sm"><input type="checkbox" :checked="galleryChosen.includes(m.id)" @change="toggleGalleryChosen(m.id)" /> Select</label>
        <button v-if="m.media_type==='image'" type="button" class="relative block w-full overflow-hidden rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]" :aria-label="`View guest photo ${visibleMedia.indexOf(m)+1}`" @click="openMedia(visibleMedia.indexOf(m))"><img :src="m.url" alt="Guest event photo" class="aspect-square w-full rounded-lg object-cover" loading="lazy" /><MediaWatermark /></button>
        <button v-else type="button" class="relative block w-full" :aria-label="`View guest video ${visibleMedia.indexOf(m)+1}`" @click="openMedia(visibleMedia.indexOf(m))"><video :src="m.url" preload="metadata" muted playsinline class="aspect-square w-full rounded-lg bg-black object-contain pointer-events-none" /><span class="absolute inset-0 flex items-center justify-center text-5xl text-white" aria-hidden="true">▶</span><MediaWatermark /></button>
        <p v-if="m.name" class="text-xs text-[#536273]">{{m.name}}</p>
-       <a v-if="m.download" :href="m.url" target="_blank" rel="noopener" class="text-sm text-[#90612E]">Open / save</a>
+       <div class="flex flex-wrap gap-3">
+        <a v-if="m.download" :href="m.url" target="_blank" rel="noopener" class="text-sm text-[#90612E]">Open / save</a>
+        <button type="button" class="text-sm text-[#90612E] underline" @click="shareMemory(m.id)">Share gallery link</button>
+       </div>
       </div>
      </div>
     </section>
