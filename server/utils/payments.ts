@@ -13,18 +13,24 @@ export function paymentOrigin(event:any) {
  if (url.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && url.hostname==='localhost')) throw createError({statusCode:503,statusMessage:'Invalid site URL'})
  return url.origin
 }
-export async function staffRole(userId:string):Promise<'admin'|'superadmin'|null>{
+export async function staffRole(userId:string):Promise<'admin'|'manager'|'superadmin'|null>{
  const allow=(process.env.EVENTKEEPSAKES_ADMIN_USER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean)
  if(allow.includes(userId))return 'superadmin'
  const db=adminDb()
  const {data:staff,error:staffError}=await db.from('staff_members').select('role,active').eq('user_id',userId).maybeSingle()
  if(staffError)throw createError({statusCode:500,statusMessage:'Staff roles unavailable. Apply migration 011.'})
- if(staff)return staff.active?(staff.role==='superadmin'?'superadmin':'admin'):null
+ if(staff)return staff.active?(staff.role==='superadmin'?'superadmin':staff.role==='manager'?'manager':'admin'):null
  const {data:profile,error}=await db.from('profiles').select('role').eq('id',userId).maybeSingle()
  if(error)throw createError({statusCode:500,statusMessage:'Unable to verify administrator role'})
  return profile?.role==='superadmin'?'superadmin':null
 }
 export async function isSuperAdmin(userId:string):Promise<boolean>{return (await staffRole(userId))==='superadmin'}
+export async function requireManager(event:any){
+ const userId=await ownerUser(event)
+ const role=await staffRole(userId)
+ if(role!=='manager'&&role!=='superadmin')throw createError({statusCode:403,statusMessage:'Manager or SuperAdmin access required'})
+ return userId
+}
 export async function requireStaff(event:any){
  const userId=await ownerUser(event),role=await staffRole(userId)
  if(!role)throw createError({statusCode:403,statusMessage:'Staff access required'})

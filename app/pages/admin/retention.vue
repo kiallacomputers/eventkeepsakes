@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
 const client=useSupabaseClient()
+const isSuperAdmin=ref(false)
 const dialog=useAppDialog()
 const loading=ref(true)
 const busy=ref(false)
@@ -58,7 +59,7 @@ async function extendEvent(eventId:string,title:string){
  }catch(e:any){error.value=e?.data?.statusMessage||e?.message||'Extension failed'}
  finally{busy.value=false}
 }
-onMounted(refresh)
+onMounted(async()=>{try{const {role}=await $fetch<{role:string}>('/api/admin/me',{headers:await headers()});isSuperAdmin.value=role==='superadmin'}catch{};await refresh()})
 </script>
 <template>
 <div class="mx-auto max-w-6xl px-5 py-12 space-y-6">
@@ -69,16 +70,16 @@ onMounted(refresh)
  <p v-if="loading">Loading…</p>
  <template v-else-if="settings">
   <section class="panel space-y-4">
-   <h2 class="text-xl font-semibold">Global retention settings</h2>
-   <label class="block">Reminder days before expiry (comma separated)
+   <h2 class="text-xl font-semibold">Global retention settings</h2><p v-if="!isSuperAdmin" class="text-sm">Only SuperAdmins can change these settings.</p>
+   <label v-if="isSuperAdmin" class="block">Reminder days before expiry (comma separated)
     <input v-model="reminderText" class="input mt-2" placeholder="30,14,7" />
    </label>
-   <label class="block">Recovery period (days)
+   <label v-if="isSuperAdmin" class="block">Recovery period (days)
     <input v-model.number="settings.recovery_days" type="number" min="1" max="365" class="input mt-2"/>
    </label>
-   <label class="flex items-center gap-2"><input v-model="settings.reminders_enabled" type="checkbox"/> Queue reminders during manual scans</label>
+   <label v-if="isSuperAdmin" class="flex items-center gap-2"><input v-model="settings.reminders_enabled" type="checkbox"/> Queue reminders during manual scans</label>
    <p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Automatic deletion OFF.</strong> This version supports audited admin extensions and reminder queues. It does not send emails automatically, sell paid extensions, or delete media.</p>
-   <div class="flex flex-wrap gap-3"><button class="btn" :disabled="busy" @click="save">Save settings</button><button class="btn" :disabled="busy" @click="scan">Run expiry scan</button></div>
+   <div class="flex flex-wrap gap-3"><button v-if="isSuperAdmin" class="btn" :disabled="busy" @click="save">Save settings</button><button class="btn" :disabled="busy" @click="scan">Run expiry scan</button></div>
   </section>
   <section class="panel space-y-3"><h2 class="text-xl font-semibold">Event expiry overview</h2><p class="text-sm text-[#536273]">First 200 records ordered by expiry date.</p>
    <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Event</th><th class="p-2">Expires</th><th class="p-2">Status</th><th class="p-2">Recovery ends</th><th class="p-2">Admin extension</th></tr></thead>

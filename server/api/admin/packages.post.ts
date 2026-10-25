@@ -1,8 +1,8 @@
 import {readBody,createError} from 'h3'
 import {adminDb} from '../../utils/media'
-import {requirePackageAdmin} from '../../utils/payments'
+import {requireManager} from '../../utils/payments'
 export default defineEventHandler(async event=>{
- await requirePackageAdmin(event)
+ await requireManager(event)
  const b=await readBody(event)
  const id=String(b?.id||'').trim(),display_name=String(b?.display_name||'').trim(),currency=String(b?.currency||'AUD').trim().toUpperCase()
  const storage_limit_bytes=Number(b?.storage_limit_bytes),retention_days=b?.retention_days===null?null:Number(b?.retention_days),price_cents=Number(b?.price_cents),sort_order=Number(b?.sort_order)

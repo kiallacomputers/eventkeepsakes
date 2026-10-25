@@ -1,9 +1,9 @@
 import {createError} from 'h3'
-import {requirePackageAdmin} from '../../utils/payments'
+import {requireManager} from '../../utils/payments'
 import {adminDb} from '../../utils/media'
 import {getRetentionSettings} from '../../utils/retention'
 export default defineEventHandler(async event=>{
- const actor=await requirePackageAdmin(event)
+ const actor=await requireManager(event)
  const db=adminDb()
  const settings=await getRetentionSettings()
  const {data,error}=await db.from('event_storage_entitlements')

@@ -1,8 +1,8 @@
 import {createError,readBody} from 'h3'
-import {requirePackageAdmin} from '../../utils/payments'
+import {requireManager} from '../../utils/payments'
 import {adminDb} from '../../utils/media'
 export default defineEventHandler(async event=>{
- const actor=await requirePackageAdmin(event)
+ const actor=await requireManager(event)
  const body=await readBody(event)
  const id=String(body?.eventId||'')
  const days=Number(body?.days)

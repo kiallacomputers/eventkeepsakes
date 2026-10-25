@@ -5,7 +5,7 @@ export default defineEventHandler(async event=>{
  const actor=await requirePackageAdmin(event)
  const b=await readBody(event)
  const userId=String(b?.userId||'').trim(),role=b?.role,active=b?.active===true
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)||!['admin','superadmin'].includes(role))
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)||!['admin','manager','superadmin'].includes(role))
   throw createError({statusCode:400,statusMessage:'Valid existing user ID and role required'})
  const db=adminDb()
  const {data:user,error:ue}=await db.auth.admin.getUserById(userId)

@@ -75,7 +75,7 @@ async function signOut() {
             Dashboard
           </NuxtLink>
 
-          <NuxtLink v-if="staffRole" to="/admin" class="text-sm font-medium text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="!text-[#B18A50]">{{staffRole==='superadmin'?'SuperAdmin':'Staff Admin'}}</NuxtLink>
+          <NuxtLink v-if="staffRole" to="/admin" class="text-sm font-medium text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="!text-[#B18A50]">{{staffRole==='superadmin'?'SuperAdmin':staffRole==='manager'?'Manager':'Staff Admin'}}</NuxtLink>
           <NuxtLink
             to="/account"
             class="text-sm font-medium text-[#0C1D2D]
