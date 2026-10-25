@@ -22,7 +22,8 @@ onMounted(async () => {
     <div v-else-if="allowed">
       <h1 class="text-3xl font-bold">Administration</h1>
       <p class="text-[#536273] mt-4">Manage EventKeepsakes settings and business operations.</p>
-      <div class="mt-6 flex flex-wrap gap-3">\n        <NuxtLink to="/admin/support" class="btn">Customer &amp; Event Support</NuxtLink>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <NuxtLink to="/admin/support" class="btn">Customer &amp; Event Support</NuxtLink>
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/packages" class="btn">Manage Packages</NuxtLink>
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/finance" class="btn">Financial Dashboard</NuxtLink>
         <NuxtLink v-if="role==='superadmin'||role==='manager'" to="/admin/retention" class="btn">Retention &amp; Recovery</NuxtLink>
