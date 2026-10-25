@@ -11,6 +11,7 @@ const tabs = computed(() => [
   { label: 'Manage Packages', to: '/admin/packages', show: role.value === 'manager' || role.value === 'superadmin' },
   { label: 'Financial Dashboard', to: '/admin/finance', show: role.value === 'manager' || role.value === 'superadmin' },
   { label: 'Retention & Recovery', to: '/admin/retention', show: role.value === 'manager' || role.value === 'superadmin' },
+  { label: 'Storage Monitoring', to: '/admin/storage', show: role.value === 'manager' || role.value === 'superadmin' },
   { label: 'Manage Staff', to: '/admin/staff', show: role.value === 'superadmin' }
 ].filter(t => t.show))
 function active(to: string) {
