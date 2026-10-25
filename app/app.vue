@@ -2,71 +2,70 @@
 const route = useRoute()
 const user = useSupabaseUser()
 
-// Identify public guest event pages
-const isGuestPage = computed(() => {
-  return route.path.startsWith('/e/')
-})
-
-// Hide account navigation from guest pages
-const showAccountNavigation = computed(() => {
-  return !isGuestPage.value && !!user.value
-})
-
-// Sign out
-// Wait for Supabase to finish restoring its browser session before revealing
-// the account menu. Staff permissions are always verified by the server.
+// The top navigation is resolved from the same authenticated session used
+// by the Administration pages. Do not rely on a hydration-time user/token pair.
+const isGuestPage = computed(() => route.path.startsWith('/e/'))
 const client = useSupabaseClient()
-const session = useSupabaseSession()
-const staffRole = ref<'admin'|'manager'|'superadmin'|null>(null)
+const staffRole = ref<'admin' | 'manager' | 'superadmin' | null>(null)
+const signedIn = ref(false)
 const navigationReady = ref(false)
-let lookupSequence = 0
+const showAccountNavigation = computed(() => !isGuestPage.value && signedIn.value)
+let checkNumber = 0
 
-watch(
-  [() => user.value?.id ?? null, () => session.value?.access_token ?? null],
-  async ([userId, accessToken]) => {
-    const sequence = ++lookupSequence
-    navigationReady.value = false
+async function refreshNavigation() {
+  const current = ++checkNumber
+  navigationReady.value = false
+  try {
+    // getSession() works for the original SuperAdmin and database-backed staff
+    // and is already used by the functioning /admin page.
+    const { data, error } = await client.auth.getSession()
+    if (current !== checkNumber) return
+    const token = error ? null : data.session?.access_token
+    if (!token) {
+      signedIn.value = false
+      staffRole.value = null
+      return
+    }
+    const result = await $fetch<{
+      allowed: boolean
+      role: 'admin' | 'manager' | 'superadmin' | null
+    }>('/api/admin/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (current !== checkNumber) return
+    signedIn.value = true
+    staffRole.value = result.allowed ? result.role : null
+  } catch (error) {
+    if (current !== checkNumber) return
+    // Do not hide the ordinary account links because a role check failed.
+    const { data } = await client.auth.getSession()
+    if (current !== checkNumber) return
+    signedIn.value = !!data.session
     staffRole.value = null
+    console.error('Unable to load Administration menu permissions', error)
+  } finally {
+    if (current === checkNumber) navigationReady.value = true
+  }
+}
 
-    if (!userId) {
-      // No logged-in user: render public navigation immediately.
-      navigationReady.value = true
-      return
+// Client-only initialisation prevents a partial menu from being painted.
+// Auth changes (including hydration, login and logout) trigger another check.
+let unsubscribeAuth: (() => void) | null = null
+onMounted(() => {
+  void refreshNavigation()
+  const { data: listener } = client.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
+      // Avoid calling Supabase methods synchronously inside its auth callback.
+      Promise.resolve().then(() => refreshNavigation())
     }
-
-    // Supabase can hydrate user and session at different moments.
-    // Use getSession as a fallback; a subsequent reactive update reruns this watcher.
-    let token = accessToken
-    if (!token) {
-      try {
-        const {data} = await client.auth.getSession()
-        token = data.session?.access_token ?? null
-      } catch { /* handle below */ }
-    }
-    if (sequence !== lookupSequence) return
-    if (!token) {
-      // Never show a guessed staff role. The user can retry by reauthenticating.
-      navigationReady.value = true
-      return
-    }
-
-    try {
-      const result = await $fetch<{allowed:boolean;role:'admin'|'manager'|'superadmin'|null}>('/api/admin/me', {
-        headers: {Authorization: `Bearer ${token}`}
-      })
-      if (sequence !== lookupSequence) return
-      staffRole.value = result.allowed ? result.role : null
-    } catch (error) {
-      if (sequence !== lookupSequence) return
-      console.error('Administration permission check failed', error)
-    } finally {
-      if (sequence === lookupSequence) navigationReady.value = true
-    }
-  },
-  {immediate:true}
-)
+  })
+  unsubscribeAuth = () => listener.subscription.unsubscribe()
+})
+onUnmounted(() => unsubscribeAuth?.())
 
 async function signOut() {
+  signedIn.value = false
+  staffRole.value = null
   await client.auth.signOut()
   await navigateTo('/')
 }
