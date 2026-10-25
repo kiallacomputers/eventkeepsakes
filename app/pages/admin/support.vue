@@ -4,6 +4,31 @@ const client=useSupabaseClient(),dialog=useAppDialog()
 const tab=ref<'events'|'customers'>('events'),search=ref(''),page=ref(1),busy=ref(false),error=ref('')
 const events=ref<any[]>([]),customers=ref<any[]>([]),total=ref(0),more=ref(false)
 const selected=ref<any>(null),note=ref(''),saving=ref(false)
+const edit=reactive({title:'',eventDate:'',status:'draft',uploadStartsAt:'',uploadEndsAt:'',reason:''})
+const updating=ref(false)
+function toLocal(v:string|null){if(!v)return '';const d=new Date(v);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
+function fromLocal(v:string){return v?new Date(v).toISOString():null}
+function initEdit(e:any){
+ edit.title=e.title||'';edit.eventDate=e.event_date||'';edit.status=e.status||'draft'
+ edit.uploadStartsAt=toLocal(e.upload_starts_at);edit.uploadEndsAt=toLocal(e.upload_ends_at);edit.reason=''
+}
+async function saveEvent(){
+ if(!selected.value||updating.value)return
+ if(edit.reason.trim().length<10){error.value='Enter a reason of at least 10 characters';return}
+ if(edit.uploadStartsAt&&edit.uploadEndsAt&&edit.uploadStartsAt>=edit.uploadEndsAt){error.value='Upload end must be after start';return}
+ const approved=await dialog.confirm(`Update "${selected.value.event.title}"?\n\nStatus: ${edit.status}\nReason: ${edit.reason}`, 'Confirm event change', 'Save changes')
+ if(!approved)return
+ updating.value=true;error.value=''
+ try{
+  const id=selected.value.event.id
+  await api('/api/admin/support/update',{method:'POST',body:{
+   eventId:id,title:edit.title,eventDate:edit.eventDate||null,status:edit.status,
+   uploadStartsAt:fromLocal(edit.uploadStartsAt),uploadEndsAt:fromLocal(edit.uploadEndsAt),reason:edit.reason
+  }})
+  await openEvent(id);await load()
+  dialog.show('Event updated and audit history recorded.','success')
+ }catch(e:any){error.value=message(e)}finally{updating.value=false}
+}
 async function api<T>(url:string,options:any={}):Promise<T>{
  const {data:{session}}=await client.auth.getSession()
  if(!session)throw new Error('Sign in required')
@@ -24,7 +49,7 @@ async function load(){
 }
 async function openEvent(id:string){
  error.value=''
- try{selected.value=await api<any>('/api/admin/support/event',{query:{id}})}
+ try{selected.value=await api<any>('/api/admin/support/event',{query:{id}});initEdit(selected.value.event)}
  catch(e:any){error.value=message(e)}
 }
 async function saveNote(){
@@ -79,6 +104,34 @@ onMounted(load)
 <p class="text-sm">Event status: {{selected.event.status}} · Upload window: {{selected.event.upload_starts_at||'Not set'}} – {{selected.event.upload_ends_at||'Not set'}}</p>
 <p class="text-sm">Storage limit: {{selected.entitlement?Math.round(Number(selected.entitlement.storage_limit_bytes)/1073741824*100)/100+' GB':'Not set'}} · Retention expiry: {{selected.entitlement?.expires_at||'Not set'}}</p>
 <p class="text-xs text-[#536273] break-all">Event ID: {{selected.event.id}}</p>
+
+<div class="border-t pt-5 space-y-3">
+<h3 class="text-xl font-semibold">Edit event details</h3>
+<p class="text-sm text-[#536273]">Changes require a reason and are recorded in the audit history. This does not extend purchased retention or storage.</p>
+<label class="block text-sm">Event name<input v-model="edit.title" class="input mt-1 w-full" maxlength="200"/></label>
+<label class="block text-sm">Event date<input v-model="edit.eventDate" type="date" class="input mt-1 w-full"/></label>
+<label class="block text-sm">Status<select v-model="edit.status" class="input mt-1 w-full">
+<option value="draft">Draft</option><option value="active">Active</option><option value="paused">Paused</option><option value="closed">Closed</option>
+</select></label>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<label class="block text-sm">Guest upload starts<input v-model="edit.uploadStartsAt" type="datetime-local" class="input mt-1 w-full"/></label>
+<label class="block text-sm">Guest upload ends<input v-model="edit.uploadEndsAt" type="datetime-local" class="input mt-1 w-full"/></label>
+</div>
+<label class="block text-sm">Reason for change (required)<textarea v-model="edit.reason" class="input mt-1 w-full" rows="3" maxlength="1000" placeholder="Explain the customer request and what changed…"/></label>
+<button class="btn" :disabled="updating||edit.reason.trim().length<10" @click="saveEvent">{{updating?'Saving…':'Review & save changes'}}</button>
+</div>
+<div class="border-t pt-5 space-y-3">
+<h3 class="text-xl font-semibold">Change history</h3>
+<p v-if="!selected.audit?.length" class="text-sm">No administrative changes recorded.</p>
+<div v-for="a in selected.audit||[]" :key="a.id" class="border-t pt-3 text-sm">
+<p class="font-semibold">{{new Date(a.created_at).toLocaleString()}} · {{a.action}}</p>
+<p class="whitespace-pre-wrap">{{a.reason}}</p>
+<details class="mt-2"><summary class="cursor-pointer">View before / after</summary>
+<pre class="whitespace-pre-wrap break-all text-xs">{{JSON.stringify({before:a.before_values,after:a.after_values},null,2)}}</pre>
+</details>
+<p class="text-xs text-[#536273]">Staff {{a.staff_user_id}}</p>
+</div>
+</div>
 <h3 class="font-semibold">Support notes</h3>
 <p v-if="!selected.notes.length" class="text-sm">No support notes yet.</p>
 <div v-for="n in selected.notes" :key="n.id" class="border-t pt-2">
