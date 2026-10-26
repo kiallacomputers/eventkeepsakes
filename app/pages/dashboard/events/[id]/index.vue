@@ -194,7 +194,18 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         <label class="text-sm font-semibold">Theme<select v-model="branding.gallery_theme" class="input mt-2"><option value="classic">Classic</option><option value="wedding">Wedding</option><option value="birthday">Birthday</option><option value="corporate">Corporate</option><option value="custom">Custom</option></select></label>
        </div>
        <label v-if="branding.gallery_theme==='custom'" class="flex items-center gap-3 text-sm">Accent colour <input v-model="branding.gallery_accent" type="color" /></label>
-       <div class="rounded-xl border p-4 text-center" :style="{borderColor:themeAccent}"><img v-if="branding.cover_url" :src="branding.cover_url" alt="Cover preview" class="mb-3 h-36 w-full rounded-lg object-cover" /><h3 class="text-xl font-bold">{{event.title}}</h3><p class="mt-2 whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p><p class="mt-2 text-xs" :style="{color:themeAccent}">{{branding.gallery_layout}} · {{branding.gallery_theme}}</p></div>
+       <div class="grid gap-4 sm:grid-cols-3">
+        <label class="text-sm font-semibold">Text alignment<select v-model="branding.hero_alignment" class="input mt-2"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></label>
+        <label class="text-sm font-semibold">Text colour<select v-model="branding.hero_text_color" class="input mt-2"><option value="light">Light text</option><option value="dark">Dark text</option></select></label>
+        <label class="text-sm font-semibold">Overlay strength: {{branding.hero_overlay??65}}%<input v-model.number="branding.hero_overlay" type="range" min="0" max="90" step="5" class="mt-4 w-full" /></label>
+       </div>
+       <p class="text-xs text-[#536273]">Live preview — your cover photo stays watermark-free. Adjust the overlay to keep the text readable.</p>
+       <div v-if="branding.cover_url" class="relative isolate flex min-h-64 flex-col justify-end overflow-hidden rounded-xl" :class="branding.hero_alignment==='left'?'items-start text-left':branding.hero_alignment==='right'?'items-end text-right':'items-center text-center'">
+        <img :src="branding.cover_url" alt="Cover preview" class="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <div class="absolute inset-0 -z-10" :style="{background:branding.hero_text_color==='dark'?`linear-gradient(to top,rgba(255,255,255,${Number(branding.hero_overlay??65)/100}),transparent 95%)`:`linear-gradient(to top,rgba(5,14,24,${Number(branding.hero_overlay??65)/100}),transparent 95%)`}" aria-hidden="true"></div>
+        <div class="w-full space-y-2 px-5 pb-6 pt-20" :class="branding.hero_text_color==='dark'?'text-[#0C1D2D]':'text-white'" :style="{textAlign:branding.hero_alignment||'center'}"><p class="text-xs uppercase tracking-widest">Capture · Share · Remember</p><h3 class="text-2xl font-bold">{{event.title}}</h3><p class="whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p><p v-if="event.description" class="whitespace-pre-wrap text-sm">{{event.description}}</p></div>
+       </div>
+       <div v-else class="rounded-xl border p-4 text-center" :style="{borderColor:themeAccent}"><h3 class="text-xl font-bold">{{event.title}}</h3><p class="mt-2 whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p></div>
        <button type="button" class="btn" :disabled="brandingBusy" @click="saveBranding">{{brandingBusy?'Saving…':'Save guest appearance'}}</button>
       </section>
       <section class="panel space-y-4" aria-label="Event package and storage">

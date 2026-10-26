@@ -164,8 +164,17 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
  <main class="mx-auto max-w-4xl px-5 py-12 space-y-7">
   <div v-if="loading" class="text-[#536273]">Loading event…</div>
   <div v-else-if="item" class="space-y-7">
-   <div v-if="unlocked && brand.cover_url" class="relative overflow-hidden rounded-2xl"><img :src="brand.cover_url" alt="Event cover photo" class="h-52 w-full object-cover sm:h-80" /></div>
-   <header class="text-center space-y-3"><p class="text-sm uppercase tracking-[.3em] text-[#987143]">Capture · Share · Remember</p><h1 class="text-4xl font-bold">{{ item.title }}</h1><p v-if="unlocked && brand.welcome_message" class="mx-auto max-w-2xl whitespace-pre-wrap text-[#455364]" :style="{borderBottom:`2px solid ${brandAccent}`,paddingBottom:'1rem'}">{{brand.welcome_message}}</p><p v-if="item.description" class="whitespace-pre-wrap text-[#455364]">{{ item.description }}</p></header>
+   <header v-if="unlocked && brand.cover_url" class="relative isolate flex min-h-[340px] flex-col justify-end overflow-hidden rounded-2xl sm:min-h-[440px]" :class="brand.hero_alignment==='left'?'items-start text-left':brand.hero_alignment==='right'?'items-end text-right':'items-center text-center'">
+    <img :src="brand.cover_url" alt="Event cover photo" class="absolute inset-0 -z-20 h-full w-full object-cover" />
+    <div class="absolute inset-0 -z-10" :style="{background:brand.hero_text_color==='dark'?`linear-gradient(to top,rgba(255,255,255,${Number(brand.hero_overlay??65)/100}),rgba(255,255,255,0) 95%)`:`linear-gradient(to top,rgba(5,14,24,${Number(brand.hero_overlay??65)/100}),rgba(5,14,24,0) 95%)`}" aria-hidden="true"></div>
+    <div class="relative w-full max-w-3xl space-y-3 px-5 pb-8 pt-24 sm:px-10 sm:pb-12" :class="brand.hero_text_color==='dark'?'text-[#0C1D2D]':'text-white'" :style="{textAlign:brand.hero_alignment||'center',marginLeft:brand.hero_alignment==='right'?'auto':undefined,marginRight:brand.hero_alignment==='left'?'auto':undefined}">
+     <p class="text-xs font-semibold uppercase tracking-[.28em] sm:text-sm">Capture · Share · Remember</p>
+     <h1 class="text-3xl font-bold leading-tight drop-shadow-sm sm:text-5xl">{{item.title}}</h1>
+     <p v-if="brand.welcome_message" class="whitespace-pre-wrap text-sm leading-relaxed sm:text-lg">{{brand.welcome_message}}</p>
+     <p v-if="item.description" class="whitespace-pre-wrap text-sm leading-relaxed sm:text-base">{{item.description}}</p>
+    </div>
+   </header>
+   <header v-else class="space-y-3 text-center"><p class="text-sm uppercase tracking-[.3em] text-[#987143]">Capture · Share · Remember</p><h1 class="text-4xl font-bold">{{item.title}}</h1><p v-if="unlocked && brand.welcome_message" class="mx-auto max-w-2xl whitespace-pre-wrap text-[#455364]">{{brand.welcome_message}}</p><p v-if="item.description" class="whitespace-pre-wrap text-[#455364]">{{item.description}}</p></header>
    <p v-if="error" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800" role="alert">{{ error }}</p>
    <p v-if="notice" class="rounded-lg border border-amber-300 bg-amber-50 p-3" role="status">{{ notice }}</p>
    <form v-if="item.pin_enabled&&!unlocked" class="panel mx-auto max-w-md space-y-4" @submit.prevent="unlock">
