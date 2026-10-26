@@ -164,7 +164,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
  <main class="mx-auto max-w-4xl px-5 py-12 space-y-7">
   <div v-if="loading" class="text-[#536273]">Loading event…</div>
   <div v-else-if="item" class="space-y-7">
-   <div v-if="unlocked && brand.cover_url" class="relative overflow-hidden rounded-2xl"><img :src="brand.cover_url" alt="Event cover photo" class="h-52 w-full object-cover sm:h-80" /><MediaWatermark /></div>
+   <div v-if="unlocked && brand.cover_url" class="relative overflow-hidden rounded-2xl"><img :src="brand.cover_url" alt="Event cover photo" class="h-52 w-full object-cover sm:h-80" /></div>
    <header class="text-center space-y-3"><p class="text-sm uppercase tracking-[.3em] text-[#987143]">Capture · Share · Remember</p><h1 class="text-4xl font-bold">{{ item.title }}</h1><p v-if="unlocked && brand.welcome_message" class="mx-auto max-w-2xl whitespace-pre-wrap text-[#455364]" :style="{borderBottom:`2px solid ${brandAccent}`,paddingBottom:'1rem'}">{{brand.welcome_message}}</p><p v-if="item.description" class="whitespace-pre-wrap text-[#455364]">{{ item.description }}</p></header>
    <p v-if="error" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800" role="alert">{{ error }}</p>
    <p v-if="notice" class="rounded-lg border border-amber-300 bg-amber-50 p-3" role="status">{{ notice }}</p>
