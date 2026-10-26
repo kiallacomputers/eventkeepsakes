@@ -74,7 +74,7 @@ async function signOut() {
 <template>
   <div class="min-h-screen bg-[#F8F4EB] text-[#0C1D2D]">
     <!-- Render the page and its complete navigation together, never incrementally. -->
-    <div v-if="!navigationReady" class="min-h-screen" aria-busy="true">
+    <div v-if="!isGuestPage && !navigationReady" class="min-h-screen" aria-busy="true">
       <div class="border-b border-[#E4D8C5]">
         <div class="mx-auto flex max-w-7xl items-center px-5 py-5 min-h-[90px]">
           <span class="font-serif text-2xl font-bold">Event<span class="text-[#B18A50]">Keepsakes</span></span>
@@ -84,7 +84,7 @@ async function signOut() {
     <template v-else>
 
     <!-- Main Header -->
-    <header class="border-b border-[#E4D8C5] bg-[#F8F4EB]">
+    <header v-if="!isGuestPage" class="border-b border-[#E4D8C5] bg-[#F8F4EB]">
       <div
         class="mx-auto flex max-w-7xl items-center
                justify-between gap-4 px-5 py-5"
@@ -147,7 +147,7 @@ async function signOut() {
     </header>
 
     <!-- Page Content -->
-    <main class="min-h-[calc(100vh-180px)]">
+    <main :class="isGuestPage ? 'min-h-screen' : 'min-h-[calc(100vh-180px)]'">
       <NuxtPage />
     </main>
 
@@ -155,6 +155,7 @@ async function signOut() {
 
     <!-- Footer -->
     <footer
+      v-if="!isGuestPage"
       class="border-t border-[#E4D8C5]
              bg-[#F8F4EB] py-6"
     >
@@ -176,6 +177,15 @@ async function signOut() {
           by Kialla Computers
         </p>
       </div>
+    </footer>
+
+    <!-- Guest-only unobtrusive footer: the event itself remains the focus. -->
+    <footer v-if="isGuestPage" class="border-t border-[#E4D8C5]/70 bg-[#F8F4EB] px-5 py-5 text-center" aria-label="Platform information">
+      <NuxtLink to="/" class="inline-flex items-center gap-2 rounded-md text-sm text-[#64748B] transition hover:text-[#0C1D2D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]">
+        <span>Powered by</span>
+        <span class="font-serif font-semibold text-[#0C1D2D]">Event<span class="text-[#B18A50]">Keepsakes</span></span>
+      </NuxtLink>
+      <p class="mt-1 text-[11px] tracking-wide text-[#8A8276]">Capture · Share · Remember</p>
     </footer>
 
     </template>
