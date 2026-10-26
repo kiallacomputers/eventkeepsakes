@@ -48,6 +48,23 @@ async function loadStorage() {
  finally {storageLoading.value=false}
 }
 
+const heroPalettes:Record<string,{text:string;accent:string}>={
+ 'classic-ivory':{text:'#FFF8EC',accent:'#E6CAA2'},'midnight-gold':{text:'#FFFFFF',accent:'#F2CF86'},'romantic-blush':{text:'#FFF3F4',accent:'#F7BBCB'},'elegant-charcoal':{text:'#2B2927',accent:'#7B5030'},'botanical-sage':{text:'#F7F6E9',accent:'#D6E6C1'},'modern-white':{text:'#FFFFFF',accent:'#FFFFFF'}}
+function heroDesign(b:any){
+ const pal=heroPalettes[b.hero_palette]||heroPalettes['midnight-gold'],opacity=Math.max(0,Math.min(90,Number(b.hero_overlay??65)))/100
+ const dark=b.hero_text_color==='dark'||b.hero_palette==='elegant-charcoal',base=dark?'255,255,255':'5,14,24'
+ const styles:Record<string,string>={
+ 'soft-gradient':`linear-gradient(to top,rgba(${base},${opacity}),transparent 95%)`,
+ 'romantic-glow':`radial-gradient(ellipse at center,rgba(229,158,177,${opacity*.3}),transparent 85%),linear-gradient(to top,rgba(63,28,49,${opacity}),transparent)`,
+ 'cinematic-dark':`radial-gradient(ellipse at center,transparent 5%,rgba(0,0,0,${opacity})),linear-gradient(to top,rgba(0,0,0,${opacity}),transparent)`,
+ 'clean-natural':`linear-gradient(to top,rgba(${base},${opacity*.3}),transparent)`,
+ 'frosted-glass':`linear-gradient(to top,rgba(${base},${opacity*.65}),rgba(${base},${opacity*.1}))`,
+ 'vintage-sepia':`linear-gradient(to top,rgba(85,51,25,${opacity}),rgba(130,100,62,${opacity*.2}))`,
+ 'full-colour-tint':`linear-gradient(to top,rgba(38,57,92,${opacity}),rgba(38,57,92,${opacity*.25}))`}
+ return {text:dark?'#2B2927':pal.text,accent:pal.accent,overlay:styles[b.hero_effect]||styles['soft-gradient'],shadow:dark?'0 1px 8px rgba(255,255,255,.7)':'0 2px 12px rgba(0,0,0,.65)'}
+}
+function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
+
 const branding=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
 const coverBusy=ref(false),brandingBusy=ref(false),brandingError=ref('')
 const themeAccent=computed(()=>branding.value.gallery_theme==='custom'?branding.value.gallery_accent:({classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'} as Record<string,string>)[branding.value.gallery_theme]||'#B18A50')
@@ -199,11 +216,17 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         <label class="text-sm font-semibold">Text colour<select v-model="branding.hero_text_color" class="input mt-2"><option value="light">Light text</option><option value="dark">Dark text</option></select></label>
         <label class="text-sm font-semibold">Overlay strength: {{branding.hero_overlay??65}}%<input v-model.number="branding.hero_overlay" type="range" min="0" max="90" step="5" class="mt-4 w-full" /></label>
        </div>
+       <div class="space-y-3 rounded-xl border border-[#D6B077] p-4">
+        <h3 class="font-semibold">Hero design templates</h3>
+        <label class="block text-sm font-semibold">Text colour template<select v-model="branding.hero_palette" class="input mt-2"><option value="classic-ivory">Classic Ivory</option><option value="midnight-gold">Midnight Gold</option><option value="romantic-blush">Romantic Blush</option><option value="elegant-charcoal">Elegant Charcoal</option><option value="botanical-sage">Botanical Sage</option><option value="modern-white">Modern White</option></select></label>
+        <label class="block text-sm font-semibold">Photo overlay<select v-model="branding.hero_effect" class="input mt-2"><option value="soft-gradient">Soft Gradient</option><option value="romantic-glow">Romantic Glow</option><option value="cinematic-dark">Cinematic Dark</option><option value="clean-natural">Clean &amp; Natural</option><option value="frosted-glass">Frosted Glass</option><option value="vintage-sepia">Vintage Sepia</option><option value="full-colour-tint">Full Colour Tint</option></select></label>
+        <label class="block text-sm font-semibold">Decorative elements<select v-model="branding.hero_decoration" class="input mt-2"><option value="none">None</option><option value="hearts">Hearts &amp; Lines</option><option value="lines">Elegant Lines</option><option value="floral">Floral Flourish</option></select></label>
+       </div>
        <p class="text-xs text-[#536273]">Live preview — your cover photo stays watermark-free. Adjust the overlay to keep the text readable.</p>
        <div v-if="branding.cover_url" class="relative isolate flex min-h-64 flex-col justify-end overflow-hidden rounded-xl" :class="branding.hero_alignment==='left'?'items-start text-left':branding.hero_alignment==='right'?'items-end text-right':'items-center text-center'">
         <img :src="branding.cover_url" alt="Cover preview" class="absolute inset-0 -z-20 h-full w-full object-cover" />
-        <div class="absolute inset-0 -z-10" :style="{background:branding.hero_text_color==='dark'?`linear-gradient(to top,rgba(255,255,255,${Number(branding.hero_overlay??65)/100}),transparent 95%)`:`linear-gradient(to top,rgba(5,14,24,${Number(branding.hero_overlay??65)/100}),transparent 95%)`}" aria-hidden="true"></div>
-        <div class="w-full space-y-2 px-5 pb-6 pt-20" :class="branding.hero_text_color==='dark'?'text-[#0C1D2D]':'text-white'" :style="{textAlign:branding.hero_alignment||'center'}"><p class="text-xs uppercase tracking-widest">Capture · Share · Remember</p><h3 class="text-2xl font-bold">{{event.title}}</h3><p class="whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p><p v-if="event.description" class="whitespace-pre-wrap text-sm">{{event.description}}</p></div>
+        <div class="absolute inset-0 -z-10" :style="{background:heroDesign(branding).overlay}" aria-hidden="true"></div>
+        <div class="w-full space-y-2 px-5 pb-6 pt-20" :style="{textAlign:branding.hero_alignment||'center',color:heroDesign(branding).text,textShadow:heroDesign(branding).shadow}"><p class="text-xs uppercase tracking-widest" :style="{color:heroDesign(branding).accent}">Capture · Share · Remember</p><p v-if="heroDecoration(branding)" class="text-xl" :style="{color:heroDesign(branding).accent}">{{heroDecoration(branding)}}</p><h3 class="text-2xl font-bold">{{event.title}}</h3><p class="whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p><p v-if="event.description" class="whitespace-pre-wrap text-sm">{{event.description}}</p></div>
        </div>
        <div v-else class="rounded-xl border p-4 text-center" :style="{borderColor:themeAccent}"><h3 class="text-xl font-bold">{{event.title}}</h3><p class="mt-2 whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p></div>
        <button type="button" class="btn" :disabled="brandingBusy" @click="saveBranding">{{brandingBusy?'Saving…':'Save guest appearance'}}</button>

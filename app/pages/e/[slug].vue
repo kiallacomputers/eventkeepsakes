@@ -53,6 +53,23 @@ function openLinkedMemory(){
  if(index>=0){galleryFilter.value='all';activeMedia.value=index}
 }
 
+const heroPalettes:Record<string,{text:string;accent:string}>={
+ 'classic-ivory':{text:'#FFF8EC',accent:'#E6CAA2'},'midnight-gold':{text:'#FFFFFF',accent:'#F2CF86'},'romantic-blush':{text:'#FFF3F4',accent:'#F7BBCB'},'elegant-charcoal':{text:'#2B2927',accent:'#7B5030'},'botanical-sage':{text:'#F7F6E9',accent:'#D6E6C1'},'modern-white':{text:'#FFFFFF',accent:'#FFFFFF'}}
+function heroDesign(b:any){
+ const pal=heroPalettes[b.hero_palette]||heroPalettes['midnight-gold'],opacity=Math.max(0,Math.min(90,Number(b.hero_overlay??65)))/100
+ const dark=b.hero_text_color==='dark'||b.hero_palette==='elegant-charcoal',base=dark?'255,255,255':'5,14,24'
+ const styles:Record<string,string>={
+ 'soft-gradient':`linear-gradient(to top,rgba(${base},${opacity}),transparent 95%)`,
+ 'romantic-glow':`radial-gradient(ellipse at center,rgba(229,158,177,${opacity*.3}),transparent 85%),linear-gradient(to top,rgba(63,28,49,${opacity}),transparent)`,
+ 'cinematic-dark':`radial-gradient(ellipse at center,transparent 5%,rgba(0,0,0,${opacity})),linear-gradient(to top,rgba(0,0,0,${opacity}),transparent)`,
+ 'clean-natural':`linear-gradient(to top,rgba(${base},${opacity*.3}),transparent)`,
+ 'frosted-glass':`linear-gradient(to top,rgba(${base},${opacity*.65}),rgba(${base},${opacity*.1}))`,
+ 'vintage-sepia':`linear-gradient(to top,rgba(85,51,25,${opacity}),rgba(130,100,62,${opacity*.2}))`,
+ 'full-colour-tint':`linear-gradient(to top,rgba(38,57,92,${opacity}),rgba(38,57,92,${opacity*.25}))`}
+ return {text:dark?'#2B2927':pal.text,accent:pal.accent,overlay:styles[b.hero_effect]||styles['soft-gradient'],shadow:dark?'0 1px 8px rgba(255,255,255,.7)':'0 2px 12px rgba(0,0,0,.65)'}
+}
+function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
+
 const brand=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
 const brandAccent=computed(()=>brand.value.gallery_theme==='custom'?brand.value.gallery_accent:({classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'} as Record<string,string>)[brand.value.gallery_theme]||'#B18A50')
 async function loadBrand(){if(!unlocked.value)return;try{brand.value=await $fetch('/api/guest/branding',{query:{slug}})}catch{/* optional appearance */}}
@@ -166,9 +183,9 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
   <div v-else-if="item" class="space-y-7">
    <header v-if="unlocked && brand.cover_url" class="relative isolate flex min-h-[340px] flex-col justify-end overflow-hidden rounded-2xl sm:min-h-[440px]" :class="brand.hero_alignment==='left'?'items-start text-left':brand.hero_alignment==='right'?'items-end text-right':'items-center text-center'">
     <img :src="brand.cover_url" alt="Event cover photo" class="absolute inset-0 -z-20 h-full w-full object-cover" />
-    <div class="absolute inset-0 -z-10" :style="{background:brand.hero_text_color==='dark'?`linear-gradient(to top,rgba(255,255,255,${Number(brand.hero_overlay??65)/100}),rgba(255,255,255,0) 95%)`:`linear-gradient(to top,rgba(5,14,24,${Number(brand.hero_overlay??65)/100}),rgba(5,14,24,0) 95%)`}" aria-hidden="true"></div>
-    <div class="relative w-full max-w-3xl space-y-3 px-5 pb-8 pt-24 sm:px-10 sm:pb-12" :class="brand.hero_text_color==='dark'?'text-[#0C1D2D]':'text-white'" :style="{textAlign:brand.hero_alignment||'center',marginLeft:brand.hero_alignment==='right'?'auto':undefined,marginRight:brand.hero_alignment==='left'?'auto':undefined}">
-     <p class="text-xs font-semibold uppercase tracking-[.28em] sm:text-sm">Capture · Share · Remember</p>
+    <div class="absolute inset-0 -z-10" :style="{background:heroDesign(brand).overlay}" aria-hidden="true"></div>
+    <div class="relative w-full max-w-3xl space-y-3 px-5 pb-8 pt-24 sm:px-10 sm:pb-12" :style="{textAlign:brand.hero_alignment||'center',marginLeft:brand.hero_alignment==='right'?'auto':undefined,marginRight:brand.hero_alignment==='left'?'auto':undefined,color:heroDesign(brand).text,textShadow:heroDesign(brand).shadow}">
+     <p class="text-xs font-semibold uppercase tracking-[.28em] sm:text-sm" :style="{color:heroDesign(brand).accent}">Capture · Share · Remember</p><p v-if="heroDecoration(brand)" class="text-xl sm:text-2xl" :style="{color:heroDesign(brand).accent}">{{heroDecoration(brand)}}</p>
      <h1 class="text-3xl font-bold leading-tight drop-shadow-sm sm:text-5xl">{{item.title}}</h1>
      <p v-if="brand.welcome_message" class="whitespace-pre-wrap text-sm leading-relaxed sm:text-lg">{{brand.welcome_message}}</p>
      <p v-if="item.description" class="whitespace-pre-wrap text-sm leading-relaxed sm:text-base">{{item.description}}</p>
