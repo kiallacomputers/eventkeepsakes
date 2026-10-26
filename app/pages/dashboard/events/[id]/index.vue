@@ -232,6 +232,18 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
        <p v-if="brandingError" role="alert" class="text-red-700">{{brandingError}}</p>
        <div v-if="branding.cover_url" class="relative max-w-md"><img :src="branding.cover_url" alt="Event cover preview" class="h-44 w-full rounded-lg object-cover" /><button class="mt-2 text-sm underline" type="button" :disabled="coverBusy" @click="removeCover">Remove cover</button></div>
        <label class="block text-sm font-semibold">{{branding.cover_url?'Replace':'Upload'}} cover photo (JPEG, PNG or WebP, up to 10 MB)<input class="input mt-2" type="file" accept="image/jpeg,image/png,image/webp" :disabled="coverBusy" @change="uploadCover" /></label>
+       <div class="space-y-4 rounded-xl border border-[#D6B077] p-4" aria-label="Guest experience messages">
+        <div><h3 class="font-semibold">Guest welcome &amp; upload confirmation</h3><p class="text-xs text-[#536273]">Leave any field blank to use the standard EventKeepsakes wording. These messages appear on the guest page.</p></div>
+        <label class="block text-sm font-semibold">Upload section heading <input v-model="branding.guest_intro_title" maxlength="100" class="input mt-2" placeholder="Share your favourite moments" /></label>
+        <label class="block text-sm font-semibold">Upload instructions <textarea v-model="branding.guest_upload_instructions" maxlength="500" rows="3" class="input mt-2" placeholder="Add photos and videos from your phone or computer. No account needed." /></label>
+        <label class="block text-sm font-semibold">Thank-you heading <input v-model="branding.guest_thank_you_title" maxlength="100" class="input mt-2" placeholder="Thank you for sharing!" /></label>
+        <label class="block text-sm font-semibold">Thank-you message <textarea v-model="branding.guest_thank_you_message" maxlength="500" rows="3" class="input mt-2" placeholder="Your memories have been received. Thank you for celebrating with us!" /></label>
+        <div class="rounded-lg bg-[#FFFDF8] p-4 text-center" aria-label="Thank-you preview">
+         <p class="text-xs uppercase tracking-widest" :style="{color:themeAccent}">Upload complete</p>
+         <h4 class="mt-2 text-xl font-bold">{{branding.guest_thank_you_title||'Thank you for sharing!'}}</h4>
+         <p class="mt-2 whitespace-pre-wrap text-sm text-[#536273]">{{branding.guest_thank_you_message||'Your memories have been received. Thank you for celebrating with us!'}}</p>
+        </div>
+       </div>
        <label class="block text-sm font-semibold">Welcome message<textarea v-model="branding.welcome_message" maxlength="500" rows="3" class="input mt-2" /></label>
        <div class="grid gap-4 sm:grid-cols-2">
         <label class="text-sm font-semibold">Gallery layout<select v-model="branding.gallery_layout" class="input mt-2"><option value="grid">Grid</option><option value="masonry">Masonry</option></select></label>
