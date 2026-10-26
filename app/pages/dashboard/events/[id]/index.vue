@@ -65,6 +65,33 @@ function heroDesign(b:any){
 }
 function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
 
+// Coordinated event design presets; values are validated by the existing branding API.
+const eventThemePresets=[
+ {id:'wedding',label:'Wedding',subtitle:'Blush, soft light & romantic details',gallery_theme:'wedding',gallery_accent:'#B58A98',hero_palette:'romantic-blush',hero_effect:'romantic-glow',hero_decoration:'hearts',hero_alignment:'center',hero_overlay:65,hero_text_color:'light',gallery_layout:'masonry'},
+ {id:'birthday',label:'Birthday',subtitle:'Playful purple & bright celebrations',gallery_theme:'birthday',gallery_accent:'#8C67B1',hero_palette:'modern-white',hero_effect:'full-colour-tint',hero_decoration:'floral',hero_alignment:'center',hero_overlay:60,hero_text_color:'light',gallery_layout:'grid'},
+ {id:'corporate',label:'Corporate',subtitle:'Midnight blue & crisp typography',gallery_theme:'corporate',gallery_accent:'#376A86',hero_palette:'midnight-gold',hero_effect:'cinematic-dark',hero_decoration:'lines',hero_alignment:'left',hero_overlay:70,hero_text_color:'light',gallery_layout:'grid'},
+ {id:'anniversary',label:'Anniversary',subtitle:'Timeless ivory & golden warmth',gallery_theme:'custom',gallery_accent:'#BA9262',hero_palette:'classic-ivory',hero_effect:'vintage-sepia',hero_decoration:'hearts',hero_alignment:'center',hero_overlay:60,hero_text_color:'light',gallery_layout:'masonry'},
+ {id:'baby-shower',label:'Baby Shower',subtitle:'Gentle pastels & airy light',gallery_theme:'custom',gallery_accent:'#B58BA6',hero_palette:'romantic-blush',hero_effect:'clean-natural',hero_decoration:'floral',hero_alignment:'center',hero_overlay:50,hero_text_color:'light',gallery_layout:'grid'},
+ {id:'graduation',label:'Graduation',subtitle:'Confident gold & deep contrast',gallery_theme:'custom',gallery_accent:'#B68A3F',hero_palette:'midnight-gold',hero_effect:'cinematic-dark',hero_decoration:'lines',hero_alignment:'center',hero_overlay:70,hero_text_color:'light',gallery_layout:'grid'},
+ {id:'memorial',label:'Celebration of Life',subtitle:'Understated sage & soft tones',gallery_theme:'custom',gallery_accent:'#839987',hero_palette:'botanical-sage',hero_effect:'soft-gradient',hero_decoration:'none',hero_alignment:'center',hero_overlay:55,hero_text_color:'light',gallery_layout:'masonry'},
+ {id:'party',label:'Party & Festival',subtitle:'Bold colours & vibrant atmosphere',gallery_theme:'custom',gallery_accent:'#8B57BC',hero_palette:'modern-white',hero_effect:'full-colour-tint',hero_decoration:'floral',hero_alignment:'center',hero_overlay:65,hero_text_color:'light',gallery_layout:'grid'},
+ {id:'classic',label:'Classic',subtitle:'Elegant neutral style for any event',gallery_theme:'classic',gallery_accent:'#B18A50',hero_palette:'classic-ivory',hero_effect:'soft-gradient',hero_decoration:'none',hero_alignment:'center',hero_overlay:65,hero_text_color:'light',gallery_layout:'grid'}
+] as const
+const chosenThemePreset=ref('')
+function applyThemePreset(id:string){
+ const preset=eventThemePresets.find(p=>p.id===id)
+ if(!preset)return
+ // Preserve the uploaded cover, welcome message and event-specific content.
+ Object.assign(branding.value,{
+  gallery_theme:preset.gallery_theme,gallery_accent:preset.gallery_accent,
+  hero_palette:preset.hero_palette,hero_effect:preset.hero_effect,
+  hero_decoration:preset.hero_decoration,hero_alignment:preset.hero_alignment,
+  hero_overlay:preset.hero_overlay,hero_text_color:preset.hero_text_color,
+  gallery_layout:preset.gallery_layout
+ })
+ chosenThemePreset.value=id
+}
+
 const branding=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
 const coverBusy=ref(false),brandingBusy=ref(false),brandingError=ref('')
 const themeAccent=computed(()=>branding.value.gallery_theme==='custom'?branding.value.gallery_accent:({classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'} as Record<string,string>)[branding.value.gallery_theme]||'#B18A50')
@@ -217,6 +244,21 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         <label class="text-sm font-semibold">Overlay strength: {{branding.hero_overlay??65}}%<input v-model.number="branding.hero_overlay" type="range" min="0" max="90" step="5" class="mt-4 w-full" /></label>
        </div>
        <div class="space-y-3 rounded-xl border border-[#D6B077] p-4">
+        <div class="space-y-3 pb-4">
+         <h3 class="font-semibold">Complete event themes</h3>
+         <p class="text-sm text-[#536273]">Choose a ready-made design, then fine-tune any option below. Your cover photo and messages are preserved. Save to publish.</p>
+         <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <button v-for="preset in eventThemePresets" :key="preset.id" type="button"
+           class="rounded-xl border p-3 text-left transition hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+           :class="chosenThemePreset===preset.id?'border-[#A77B42] ring-2 ring-[#D6B077]':'border-[#D6B077]'"
+           :aria-pressed="chosenThemePreset===preset.id"
+           @click="applyThemePreset(preset.id)">
+           <span class="mb-2 block h-2 w-14 rounded-full" :style="{background:preset.gallery_accent}"></span>
+           <span class="block font-semibold">{{preset.label}}</span>
+           <span class="mt-1 block text-xs text-[#536273]">{{preset.subtitle}}</span>
+          </button>
+         </div>
+        </div>
         <h3 class="font-semibold">Hero design templates</h3>
         <label class="block text-sm font-semibold">Text colour template<select v-model="branding.hero_palette" class="input mt-2"><option value="classic-ivory">Classic Ivory</option><option value="midnight-gold">Midnight Gold</option><option value="romantic-blush">Romantic Blush</option><option value="elegant-charcoal">Elegant Charcoal</option><option value="botanical-sage">Botanical Sage</option><option value="modern-white">Modern White</option></select></label>
         <label class="block text-sm font-semibold">Photo overlay<select v-model="branding.hero_effect" class="input mt-2"><option value="soft-gradient">Soft Gradient</option><option value="romantic-glow">Romantic Glow</option><option value="cinematic-dark">Cinematic Dark</option><option value="clean-natural">Clean &amp; Natural</option><option value="frosted-glass">Frosted Glass</option><option value="vintage-sepia">Vintage Sepia</option><option value="full-colour-tint">Full Colour Tint</option></select></label>
