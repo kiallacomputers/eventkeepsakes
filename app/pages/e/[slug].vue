@@ -71,6 +71,9 @@ function heroDesign(b:any){
 function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
 
 const brand=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
+const guestThemeStyle=computed(()=>({'--guest-accent':brandAccent.value,'--guest-accent-border':`${brandAccent.value}66`}))
+const uploadSection=ref<HTMLElement|null>(null)
+function jumpToUpload(){uploadSection.value?.scrollIntoView({behavior:'smooth',block:'start'})}
 const brandAccent=computed(()=>brand.value.gallery_theme==='custom'?brand.value.gallery_accent:({classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'} as Record<string,string>)[brand.value.gallery_theme]||'#B18A50')
 async function loadBrand(){if(!unlocked.value)return;try{brand.value=await $fetch('/api/guest/branding',{query:{slug}})}catch{/* optional appearance */}}
 const visibleMedia=computed(()=>media.value.filter(m=>galleryFilter.value==='all'||m.media_type===galleryFilter.value))
@@ -178,7 +181,7 @@ onMounted(()=>{timer=setInterval(()=>now.value=Date.now(),30000);window.addEvent
 onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydown',galleryKeydown);cleanupPreviews()})
 </script>
 <template>
- <main class="mx-auto max-w-4xl px-5 py-12 space-y-7">
+ <main class="guest-experience mx-auto max-w-5xl space-y-7 px-4 pb-28 pt-5 sm:px-6 sm:py-10" :style="guestThemeStyle">
   <div v-if="loading" class="text-[#536273]">Loading event…</div>
   <div v-else-if="item" class="space-y-7">
    <header v-if="unlocked && brand.cover_url" class="relative isolate flex min-h-[340px] flex-col justify-end overflow-hidden rounded-2xl sm:min-h-[440px]" :class="brand.hero_alignment==='left'?'items-start text-left':brand.hero_alignment==='right'?'items-end text-right':'items-center text-center'">
@@ -200,7 +203,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     <button class="btn w-full" :disabled="busy">{{busy?'Checking…':'Enter event'}}</button>
    </form>
    <template v-else>
-    <section class="panel space-y-5" aria-label="Guest memory uploads">
+    <section id="guest-upload" ref="uploadSection" class="panel guest-themed-panel space-y-5 scroll-mt-5" aria-label="Guest memory uploads">
      <div class="space-y-2 text-center">
       <p class="text-xs font-semibold uppercase tracking-[.2em] text-[#987143]">Your memories matter</p>
       <h2 class="text-2xl font-semibold text-[#0C1D2D]">Share your favourite moments</h2>
@@ -229,21 +232,21 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
        </div>
        <div class="space-y-1"><div class="flex justify-between text-xs text-[#536273]"><span>{{uploadDone}} of {{uploads.length}} completed</span><span>{{uploadPercent}}%</span></div><div class="h-2 overflow-hidden rounded-full bg-[#E4D8C5]" role="progressbar" :aria-valuenow="uploadDone" :aria-valuemax="uploads.length" aria-valuemin="0" aria-label="Files uploaded"><div class="h-full rounded-full bg-[#B18A50] transition-all" :style="{width:`${uploadPercent}%`}" /></div></div>
       </div>
-      <button class="btn w-full" :disabled="busy||!uploads.some(x=>x.state==='ready'||x.state==='failed')">{{busy?'Uploading memories…':uploadFailed?'Retry failed uploads':'Upload memories'}}</button>
+      <button class="btn guest-primary w-full" :disabled="busy||!uploads.some(x=>x.state==='ready'||x.state==='failed')">{{busy?'Uploading memories…':uploadFailed?'Retry failed uploads':'Upload memories'}}</button>
      </form>
     </section>
-    <section v-if="item.gallery_visibility==='shared'" class="panel space-y-4">
+    <section v-if="item.gallery_visibility==='shared'" class="panel guest-themed-panel space-y-4">
      <div class="flex items-center justify-between gap-3"><h2 class="text-2xl font-semibold" :style="{color:brandAccent}">Shared gallery</h2><button type="button" class="text-[#90612E]" @click="loadGallery">Refresh</button></div>
      <p v-if="galleryError" class="text-red-700">{{galleryError}}</p>
      <p v-else-if="!media.length" class="text-[#536273]">No approved photos or videos yet.</p>
      <div v-if="media.length" class="flex flex-wrap gap-2" role="group" aria-label="Filter gallery">
-      <button v-for="f in [{value:'all',label:'All memories'},{value:'image',label:'Photos'},{value:'video',label:'Videos'}]" :key="f.value" type="button" class="rounded-full border px-4 py-2 text-sm font-semibold" :class="galleryFilter===f.value?'border-[#0C1D2D] bg-[#0C1D2D] text-white':'border-[#D6B077] text-[#0C1D2D]'" :aria-pressed="galleryFilter===f.value" @click="galleryFilter=f.value as any">{{f.label}}</button>
+      <button v-for="f in [{value:'all',label:'All memories'},{value:'image',label:'Photos'},{value:'video',label:'Videos'}]" :key="f.value" type="button" class="rounded-full border px-4 py-2 text-sm font-semibold" :class="galleryFilter===f.value?'guest-filter-active':'guest-filter-inactive'" :aria-pressed="galleryFilter===f.value" @click="galleryFilter=f.value as any">{{f.label}}</button>
      </div>
      <div v-if="media.length && media.some(m=>m.download)" class="flex flex-wrap items-center gap-3 rounded-lg border border-[#D6B077] p-3">
       <span class="text-sm font-semibold">{{galleryChosen.length}} selected</span>
       <button type="button" class="text-sm text-[#90612E] underline" @click="chooseVisible">Select visible</button>
       <button type="button" class="text-sm text-[#90612E] underline" @click="galleryChosen=[]">Clear selection</button>
-      <button type="button" class="btn text-sm" :disabled="!galleryChosen.length||galleryDownloading" @click="downloadChosen">{{galleryDownloading?'Preparing ZIP…':'Download selected ZIP'}}</button>
+      <button type="button" class="btn guest-primary text-sm" :disabled="!galleryChosen.length||galleryDownloading" @click="downloadChosen">{{galleryDownloading?'Preparing ZIP…':'Download selected ZIP'}}</button>
      </div>
      <p v-if="galleryDownloadError" role="alert" class="text-sm text-red-700">{{galleryDownloadError}}</p>
      <p v-if="galleryShareNotice" role="status" class="break-all text-sm text-[#536273]">{{galleryShareNotice}}</p>
@@ -261,10 +264,11 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
       </div>
      </div>
     </section>
-    <section v-else class="panel"><h2 class="text-xl font-semibold">Private gallery</h2><p class="mt-2 text-[#536273]">Only the event organiser can view uploaded media.</p></section>
+    <section v-else class="panel guest-themed-panel"><h2 class="text-xl font-semibold">Private gallery</h2><p class="mt-2 text-[#536273]">Only the event organiser can view uploaded media.</p></section>
    </template>
   </div>
   <p v-else class="text-red-700">{{error||'Event not found'}}</p>
+  <button v-if="unlocked && canUpload && !viewing" type="button" class="guest-floating-upload fixed bottom-5 right-5 z-40 rounded-full px-5 py-3 text-sm font-semibold shadow-xl sm:bottom-8 sm:right-8" aria-label="Jump to upload photos and videos" @click="jumpToUpload">＋ Upload memories</button>
   <Teleport to="body">
    <div v-if="viewing" class="fixed inset-0 z-[9000] flex items-center justify-center bg-[#081724]/95 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Guest media viewer" @touchstart.passive="onViewerTouchStart" @touchend.passive="onViewerTouchEnd" @click.self="closeMedia">
     <div class="flex h-full w-full max-w-5xl flex-col items-center justify-center gap-3">
@@ -285,3 +289,14 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
   </Teleport>
  </main>
 </template>
+
+<style scoped>
+.guest-experience{color:#0c1d2d}
+.guest-themed-panel{border:1px solid var(--guest-accent-border);box-shadow:0 10px 30px rgba(12,29,45,.045);border-radius:1.25rem}
+.guest-themed-panel h2{color:var(--guest-accent)}
+.guest-primary,.guest-floating-upload{background:var(--guest-accent)!important;color:white!important;border-color:var(--guest-accent)!important}
+.guest-primary:disabled{opacity:.55;cursor:not-allowed}
+.guest-filter-active{background:var(--guest-accent);color:white;border-color:var(--guest-accent)}
+.guest-filter-inactive{background:white;color:#0c1d2d;border-color:var(--guest-accent-border)}
+.guest-themed-panel button:focus-visible,.guest-floating-upload:focus-visible{outline:3px solid var(--guest-accent);outline-offset:3px}
+</style>
