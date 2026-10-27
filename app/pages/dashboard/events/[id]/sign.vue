@@ -142,8 +142,6 @@ const fontCategories = ['System fonts','Calligraphy & Wedding','Handwritten & Ca
 const fontsByCategory = computed(()=>fontCategories.map(label=>({label,fonts:fontOptions.filter(f=>(f.category||'System fonts')===label)})))
 
 const typographySections:{key:TextKey;label:string}[]=[
- {key:'brand',label:'EventKeepsakes logo'},
- {key:'tagline',label:'Brand tagline'},
  {key:'event',label:'Event name'},
  {key:'date',label:'Event date'},
  {key:'heading',label:'Welcome heading'},
@@ -163,7 +161,7 @@ const typography=reactive<Record<TextKey,TextStyle>>({
 })
 const selectedTypography=ref<TextKey>('event')
 // Load only fonts currently used on the poster, avoiding a large upfront download.
-const selectedWebFonts=computed(()=>[...new Set(Object.values(typography).map(t=>fontOptions.find(f=>f.value===t.font)?.family).filter((f):f is string=>!!f))])
+const selectedWebFonts=computed(()=>[...new Set(typographySections.map(({key})=>typography[key]).map(t=>fontOptions.find(f=>f.value===t.font)?.family).filter((f):f is string=>!!f))])
 const fontStylesheetUrl=computed(()=>selectedWebFonts.value.length?'https://fonts.googleapis.com/css2?'+selectedWebFonts.value.map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
 useHead(()=>({link:fontStylesheetUrl.value?[{key:'sign-fonts',rel:'stylesheet',href:fontStylesheetUrl.value}]:[]}))
 
