@@ -354,12 +354,8 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
           <button type="button" class="text-sm font-medium text-[#90612E] underline" @click="loadStorage">Refresh storage</button>
         </template>
       </section>
-      <section v-show="activeTab==='media'" class="panel flex flex-wrap items-center justify-between gap-4" aria-label="Guest media management">
-        <div>
-          <h2 class="text-xl font-semibold text-[#0C1D2D]">Guest Media Management</h2>
-          <p class="mt-1 text-sm text-[#536273]">Review, approve and manage guest photos and videos.</p>
-        </div>
-        <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="btn">Manage Photos &amp; Videos →</NuxtLink>
+      <section v-show="activeTab==='media'" class="min-w-0" aria-label="Guest media management">
+        <OwnerMediaManagement :event-id="String(event.id)" />
       </section>
       <div v-show="['details','schedule','guests','qr'].includes(activeTab)" class="grid min-w-0 grid-cols-1 gap-6">
         <form v-show="['details','schedule','guests'].includes(activeTab)" class="panel min-w-0 space-y-5" @submit.prevent="save">
