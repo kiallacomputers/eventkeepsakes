@@ -2,6 +2,20 @@
 import QRCode from 'qrcode'
 definePageMeta({ middleware: 'auth' })
 const route = useRoute()
+const managementTabs = [
+ {id:'overview',label:'Overview',icon:'◫'},
+ {id:'details',label:'Event Details',icon:'▤'},
+ {id:'schedule',label:'Schedule & Access',icon:'◷'},
+ {id:'branding',label:'Branding & Themes',icon:'✦'},
+ {id:'guests',label:'Guest Experience',icon:'♡'},
+ {id:'media',label:'Media & Gallery',icon:'▦'},
+ {id:'qr',label:'QR Codes & Posters',icon:'▧'},
+ {id:'package',label:'Package & Storage',icon:'◈'}
+] as const
+type ManagementTab = typeof managementTabs[number]['id']
+const activeTab = ref<ManagementTab>('overview')
+const activeTabLabel = computed(()=>managementTabs.find(t=>t.id===activeTab.value)?.label||'Overview')
+
 const client = useSupabaseClient()
 const dialog = useAppDialog()
 const event = ref<any>(null)
@@ -173,15 +187,34 @@ async function copyLink() { try { await navigator.clipboard.writeText(guestUrl.v
 onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStorage(); loadOverview(); loadBranding() })
 </script>
 <template>
-  <div class="mx-auto max-w-5xl px-5 py-10 space-y-7">
+  <div class="mx-auto max-w-7xl px-4 py-6 space-y-5 sm:px-6 lg:px-8">
     <NuxtLink to="/dashboard" class="ek-back-button inline-flex items-center gap-2 rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold text-[#0C1D2D] shadow-sm transition hover:bg-[#F0E5D3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B18A50]"><span aria-hidden="true">←</span><span>Back</span></NuxtLink>
     <p v-if="loading" class="text-[#536273]">Loading event…</p>
     <div v-else-if="event" class="space-y-7">
-      <div><h1 class="text-3xl font-bold">{{ event.title }}</h1><p class="text-[#536273] mt-2">Manage your event, sharing and access settings.</p></div>
+      <div class="rounded-2xl bg-[#10243A] px-6 py-6 text-white">
+ <p class="text-xs font-semibold uppercase tracking-widest text-[#D6B077]">EventKeepsakes / Event Management</p>
+ <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+ <div><h1 class="text-2xl font-bold sm:text-3xl">{{event.title}}</h1><p class="mt-1 text-sm text-[#D5DEE7]">{{eventDateLabel}} · Manage your event settings and guest experience</p></div>
+ <span class="rounded-full border border-[#D6B077] px-3 py-1 text-xs font-semibold capitalize text-[#F4E3C6]">{{event.status}}</span></div></div>
       <p v-if="error" class="rounded-lg border border-red-500 p-3 text-red-700" role="alert">{{ error }}</p>
       <p v-if="notice" class="rounded-lg border border-teal-500 p-3 text-[#336A57]" role="status">{{ notice }}</p>
+      <div class="grid items-start gap-5 lg:grid-cols-[245px_minmax(0,1fr)]">
+       <nav aria-label="Event management navigation" class="rounded-2xl border border-[#E4D8C5] bg-[#F8F4EB] p-2 lg:sticky lg:top-5">
+        <p class="px-3 pb-2 pt-3 text-xs font-semibold uppercase tracking-wider text-[#64748B]">Manage event</p>
+        <div class="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1">
+         <button v-for="tab in managementTabs" :key="tab.id" type="button" :aria-current="activeTab===tab.id?'page':undefined"
+          class="flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition sm:text-sm"
+          :class="activeTab===tab.id?'bg-[#10243A] text-white shadow-sm':'text-[#243B51] hover:bg-[#EEE4D6]'"
+          @click="activeTab=tab.id"><span class="w-5 text-center text-base" aria-hidden="true">{{tab.icon}}</span><span>{{tab.label}}</span></button>
+        </div>
+       </nav>
+       <div class="min-w-0 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+         <h2 class="text-2xl font-bold text-[#10243A]">{{activeTabLabel}}</h2>
+         <a v-if="guestUrl" :href="guestUrl" target="_blank" rel="noopener noreferrer" class="rounded-xl border border-[#D6B077] bg-white px-3 py-2 text-xs font-semibold text-[#10243A]">View guest page ↗</a>
+        </div>
       <!-- Phase 9B: read-only owner overview. Existing event settings are preserved. -->
-      <section class="space-y-4" aria-label="Event overview">
+      <section v-show="activeTab==='overview'" class="space-y-4" aria-label="Event overview">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-2xl font-semibold text-[#0C1D2D]">Event overview</h2>
@@ -226,13 +259,13 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
           <a v-if="guestUrl" :href="guestUrl" target="_blank" rel="noopener noreferrer" class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] px-3 py-4 text-center text-sm font-semibold text-[#0C1D2D] hover:bg-[#F0E5D3]">Guest upload page ↗</a>
         </div>
       </section>
-      <section class="panel space-y-4" aria-label="Event branding">
-       <h2 class="text-xl font-bold">Event branding &amp; guest appearance</h2>
-       <p class="text-sm text-[#536273]">Cover photos are separate from guest memories and are available in the QR poster designer.</p>
+      <section v-show="activeTab==='branding' || activeTab==='guests'" class="panel space-y-4" aria-label="Event branding">
+       <h2 class="text-xl font-bold">{{activeTab==='guests'?'Guest experience & messages':'Event branding & appearance'}}</h2>
+       <p v-show="activeTab==='branding'" class="text-sm text-[#536273]">Cover photos are separate from guest memories and are available in the QR poster designer.</p>
        <p v-if="brandingError" role="alert" class="text-red-700">{{brandingError}}</p>
-       <div v-if="branding.cover_url" class="relative max-w-md"><img :src="branding.cover_url" alt="Event cover preview" class="h-44 w-full rounded-lg object-cover" /><button class="mt-2 text-sm underline" type="button" :disabled="coverBusy" @click="removeCover">Remove cover</button></div>
-       <label class="block text-sm font-semibold">{{branding.cover_url?'Replace':'Upload'}} cover photo (JPEG, PNG or WebP, up to 10 MB)<input class="input mt-2" type="file" accept="image/jpeg,image/png,image/webp" :disabled="coverBusy" @change="uploadCover" /></label>
-       <div class="space-y-4 rounded-xl border border-[#D6B077] p-4" aria-label="Guest experience messages">
+       <div v-if="branding.cover_url && activeTab==='branding'" class="relative max-w-md"><img :src="branding.cover_url" alt="Event cover preview" class="h-44 w-full rounded-lg object-cover" /><button class="mt-2 text-sm underline" type="button" :disabled="coverBusy" @click="removeCover">Remove cover</button></div>
+       <label v-show="activeTab==='branding'" class="block text-sm font-semibold">{{branding.cover_url?'Replace':'Upload'}} cover photo (JPEG, PNG or WebP, up to 10 MB)<input class="input mt-2" type="file" accept="image/jpeg,image/png,image/webp" :disabled="coverBusy" @change="uploadCover" /></label>
+       <div v-show="activeTab==='guests'" class="space-y-4 rounded-xl border border-[#D6B077] p-4" aria-label="Guest experience messages">
         <div><h3 class="font-semibold">Guest welcome &amp; upload confirmation</h3><p class="text-xs text-[#536273]">Leave any field blank to use the standard EventKeepsakes wording. These messages appear on the guest page.</p></div>
         <label class="block text-sm font-semibold">Upload section heading <input v-model="branding.guest_intro_title" maxlength="100" class="input mt-2" placeholder="Share your favourite moments" /></label>
         <label class="block text-sm font-semibold">Upload instructions <textarea v-model="branding.guest_upload_instructions" maxlength="500" rows="3" class="input mt-2" placeholder="Add photos and videos from your phone or computer. No account needed." /></label>
@@ -244,7 +277,7 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
          <p class="mt-2 whitespace-pre-wrap text-sm text-[#536273]">{{branding.guest_thank_you_message||'Your memories have been received. Thank you for celebrating with us!'}}</p>
         </div>
        </div>
-       <div class="space-y-4 rounded-xl border border-[#D6B077] p-4" aria-label="Event countdown settings">
+       <div v-show="activeTab==='guests'" class="space-y-4 rounded-xl border border-[#D6B077] p-4" aria-label="Event countdown settings">
         <div><h3 class="font-semibold">Event countdown</h3><p class="text-xs text-[#536273]">Optional countdown shown on the guest page. It uses the existing Uploads open time from Event Settings. No second date is needed.</p></div>
         <label class="flex items-center gap-3 text-sm font-semibold"><input v-model="branding.countdown_enabled" type="checkbox" /> Show countdown to event</label>
         <template v-if="branding.countdown_enabled">
@@ -258,7 +291,8 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
          </div>
         </template>
        </div>
-       <label class="block text-sm font-semibold">Welcome message<textarea v-model="branding.welcome_message" maxlength="500" rows="3" class="input mt-2" /></label>
+       <label v-show="activeTab==='branding'" class="block text-sm font-semibold">Welcome message<textarea v-model="branding.welcome_message" maxlength="500" rows="3" class="input mt-2" /></label>
+       <div v-show="activeTab==='branding'" class="space-y-5">
        <div class="grid gap-4 sm:grid-cols-2">
         <label class="text-sm font-semibold">Gallery layout<select v-model="branding.gallery_layout" class="input mt-2"><option value="grid">Grid</option><option value="masonry">Masonry</option></select></label>
         <label class="text-sm font-semibold">Theme<select v-model="branding.gallery_theme" class="input mt-2"><option value="classic">Classic</option><option value="wedding">Wedding</option><option value="birthday">Birthday</option><option value="corporate">Corporate</option><option value="custom">Custom</option></select></label>
@@ -297,9 +331,10 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         <div class="w-full space-y-2 px-5 pb-6 pt-20" :style="{textAlign:branding.hero_alignment||'center',color:heroDesign(branding).text,textShadow:heroDesign(branding).shadow}"><p class="text-xs uppercase tracking-widest" :style="{color:heroDesign(branding).accent}">Capture · Share · Remember</p><p v-if="heroDecoration(branding)" class="text-xl" :style="{color:heroDesign(branding).accent}">{{heroDecoration(branding)}}</p><h3 class="text-2xl font-bold">{{event.title}}</h3><p class="whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p><p v-if="event.description" class="whitespace-pre-wrap text-sm">{{event.description}}</p></div>
        </div>
        <div v-else class="rounded-xl border p-4 text-center" :style="{borderColor:themeAccent}"><h3 class="text-xl font-bold">{{event.title}}</h3><p class="mt-2 whitespace-pre-wrap text-sm">{{branding.welcome_message||'Welcome to our event!'}}</p></div>
+       </div>
        <button type="button" class="btn" :disabled="brandingBusy" @click="saveBranding">{{brandingBusy?'Saving…':'Save guest appearance'}}</button>
       </section>
-      <section class="panel space-y-4" aria-label="Event package and storage">
+      <section v-show="activeTab==='package'" class="panel space-y-4" aria-label="Event package and storage">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div><h2 class="text-xl font-semibold text-[#0C1D2D]">Event Package &amp; Storage</h2><p class="text-sm text-[#536273]">Your current package and original media storage.</p></div>
           <NuxtLink :to="`/dashboard/events/${event.id}/packages`" class="btn">View / Upgrade Package →</NuxtLink>
@@ -319,54 +354,56 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
           <button type="button" class="text-sm font-medium text-[#90612E] underline" @click="loadStorage">Refresh storage</button>
         </template>
       </section>
-      <section class="panel flex flex-wrap items-center justify-between gap-4" aria-label="QR welcome sign designer">
+      <section v-show="activeTab==='qr'" class="panel flex flex-wrap items-center justify-between gap-4" aria-label="QR welcome sign designer">
         <div><h2 class="text-xl font-semibold text-[#0C1D2D]">QR Welcome Sign Designer</h2><p class="mt-1 text-sm text-[#536273]">Create a personalised A4 or A5 printable sign for your guests.</p></div>
         <NuxtLink :to="`/dashboard/events/${event.id}/sign`" class="btn">Design Welcome Sign →</NuxtLink>
       </section>
-      <section class="panel flex flex-wrap items-center justify-between gap-4" aria-label="Guest media management">
+      <section v-show="activeTab==='media'" class="panel flex flex-wrap items-center justify-between gap-4" aria-label="Guest media management">
         <div>
           <h2 class="text-xl font-semibold text-[#0C1D2D]">Guest Media Management</h2>
           <p class="mt-1 text-sm text-[#536273]">Review, approve and manage guest photos and videos.</p>
         </div>
         <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="btn">Manage Photos &amp; Videos →</NuxtLink>
       </section>
-      <div class="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <form class="panel space-y-5" @submit.prevent="save">
-          <h2 class="text-xl font-semibold">Event details</h2>
+      <div v-show="['details','schedule','guests','qr'].includes(activeTab)" class="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <form v-show="['details','schedule','guests'].includes(activeTab)" class="panel space-y-5" @submit.prevent="save">
+          <div v-show="activeTab==='details'" class="space-y-4"><h2 class="text-xl font-semibold">Event details</h2>
           <label class="block text-sm">Event name<input v-model="event.title" maxlength="150" required class="input mt-2" /></label>
           <label class="block text-sm">Description<textarea v-model="event.description" maxlength="3000" rows="3" class="input mt-2" /></label>
           <div class="grid sm:grid-cols-2 gap-4">
             <label class="block text-sm">Event date<input v-model="event.event_date" type="date" class="input mt-2" /></label>
             <label class="block text-sm">Status<select v-model="event.status" class="input mt-2"><option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option></select></label>
           </div>
-          <h2 class="text-xl font-semibold pt-3">Upload schedule</h2>
+          </div><div v-show="activeTab==='schedule'" class="space-y-4"><h2 class="text-xl font-semibold pt-3">Upload schedule</h2>
           <p class="text-xs text-[#536273]">Times are entered in your browser's local timezone and saved as UTC. The timezone label is used for event display; enter times using the browser timezone for this release.</p>
           <label class="block text-sm">Event timezone<input v-model="event.timezone" class="input mt-2" placeholder="Australia/Melbourne" /></label>
           <div class="grid sm:grid-cols-2 gap-4">
             <label class="block text-sm">Uploads open<input v-model="startsLocal" type="datetime-local" class="input mt-2" /></label>
             <label class="block text-sm">Uploads close<input v-model="endsLocal" type="datetime-local" class="input mt-2" /></label>
           </div>
-          <h2 class="text-xl font-semibold pt-3">Guest settings</h2>
+          </div><div v-show="activeTab==='guests'" class="space-y-4"><h2 class="text-xl font-semibold pt-3">Guest settings</h2>
           <label class="block text-sm">Gallery visibility<select v-model="event.gallery_visibility" class="input mt-2"><option value="private">Private — event holder only</option><option value="shared">Shared — guests can view approved uploads</option></select></label>
           <label class="block text-sm">Guest name<select v-model="event.guest_name_mode" class="input mt-2"><option value="required">Required</option><option value="optional">Optional</option><option value="disabled">Disabled</option></select></label>
           <label class="flex items-center gap-3"><input v-model="event.moderation_enabled" type="checkbox" /> Approve guest uploads before sharing</label>
           <label class="flex items-center gap-3"><input v-model="event.guest_downloads_enabled" type="checkbox" /> Allow guest downloads</label>
           <label class="flex items-center gap-3"><input v-model="event.show_contributor_names" type="checkbox" /> Show contributor names</label>
-          <button class="btn" :disabled="saving">{{ saving ? 'Saving…' : 'Save settings' }}</button>
+          </div><button class="btn" :disabled="saving">{{ saving ? 'Saving…' : 'Save settings' }}</button>
         </form>
         <div class="space-y-6">
-          <div class="panel space-y-4"><h2 class="text-xl font-semibold">Guest QR code</h2>
+          <div v-show="activeTab==='qr'" class="panel space-y-4"><h2 class="text-xl font-semibold">Guest QR code</h2>
             <img v-if="qrDataUrl" :src="qrDataUrl" alt="Event guest link QR code" class="w-full rounded-lg bg-white p-2" />
             <input :value="guestUrl" readonly class="input text-xs" aria-label="Guest URL" />
             <div class="flex flex-wrap gap-2"><button type="button" class="btn" @click="copyLink">Copy link</button><button type="button" class="btn" @click="downloadQr">Download QR</button></div>
             <p class="text-xs text-[#536273]">This QR code is permanent. Guest uploads are available in Phase 3.</p>
           </div>
-          <form class="panel space-y-4" @submit.prevent="savePin"><h2 class="text-xl font-semibold">Optional event PIN</h2>
+          <form v-show="activeTab==='schedule'" class="panel space-y-4" @submit.prevent="savePin"><h2 class="text-xl font-semibold">Optional event PIN</h2>
             <p class="text-sm text-[#536273]">{{ event.pin_enabled ? 'A PIN is configured.' : 'No PIN is configured.' }} PIN protection is enforced for guest uploads and galleries.</p>
             <label class="block text-sm">New PIN (4–8 digits)<input v-model="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" class="input mt-2" placeholder="Leave blank to disable" /></label>
             <button class="btn" :disabled="pinSaving">{{ pinSaving ? 'Updating…' : 'Save PIN / disable' }}</button>
           </form>
         </div>
+      </div>
+       </div>
       </div>
     </div>
     <p v-else class="text-red-700">{{ error || 'Event not found or you do not have access.' }}</p>
