@@ -361,7 +361,7 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         </div>
         <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="btn">Manage Photos &amp; Videos →</NuxtLink>
       </section>
-      <div v-show="['details','schedule','guests','qr'].includes(activeTab)" class="grid min-w-0 gap-6" :class="activeTab==='schedule' || activeTab==='qr' ? 'lg:grid-cols-2' : 'grid-cols-1'">
+      <div v-show="['details','schedule','guests','qr'].includes(activeTab)" class="grid min-w-0 grid-cols-1 gap-6">
         <form v-show="['details','schedule','guests'].includes(activeTab)" class="panel min-w-0 space-y-5" @submit.prevent="save">
           <div v-show="activeTab==='details'" class="space-y-4"><h2 class="text-xl font-semibold">Event details</h2>
           <label class="block text-sm">Event name<input v-model="event.title" maxlength="150" required class="input mt-2" /></label>
