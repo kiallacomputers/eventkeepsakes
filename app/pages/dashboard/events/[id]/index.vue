@@ -93,11 +93,6 @@ function applyThemePreset(id:string){
 }
 
 const branding=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
-const countdownLocal=computed({
- get:()=>{const d=branding.value.countdown_target;if(!d)return '';const parsed=new Date(d);if(!Number.isFinite(parsed.getTime()))return '';const local=new Date(parsed.getTime()-parsed.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)},
- set:(value:string)=>{branding.value.countdown_target=value?new Date(value).toISOString():null}
-})
-const countdownPreview=computed(()=>{const t=Date.parse(branding.value.countdown_target||'');return Number.isFinite(t)?new Date(t).toLocaleString(undefined,{dateStyle:'full',timeStyle:'short'}):'Choose a date and time'})
 const coverBusy=ref(false),brandingBusy=ref(false),brandingError=ref('')
 const themeAccent=computed(()=>branding.value.gallery_theme==='custom'?branding.value.gallery_accent:({classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'} as Record<string,string>)[branding.value.gallery_theme]||'#B18A50')
 async function brandAuth(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in again');return {authorization:`Bearer ${session.access_token}`}}
@@ -250,17 +245,16 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         </div>
        </div>
        <div class="space-y-4 rounded-xl border border-[#D6B077] p-4" aria-label="Event countdown settings">
-        <div><h3 class="font-semibold">Event countdown</h3><p class="text-xs text-[#536273]">Optional countdown shown on the guest page. It switches to your celebration message when the chosen time arrives.</p></div>
+        <div><h3 class="font-semibold">Event countdown</h3><p class="text-xs text-[#536273]">Optional countdown shown on the guest page. It uses the existing Uploads open time from Event Settings. No second date is needed.</p></div>
         <label class="flex items-center gap-3 text-sm font-semibold"><input v-model="branding.countdown_enabled" type="checkbox" /> Show countdown to event</label>
         <template v-if="branding.countdown_enabled">
-         <label class="block text-sm font-semibold">Event date and time <input v-model="countdownLocal" type="datetime-local" class="input mt-2" required /></label>
-         <p class="text-xs text-[#536273]">Time is entered in your device's local time zone and saved as an absolute time. Preview: {{countdownPreview}}</p>
+         <p class="rounded-lg bg-[#F8F4EB] p-3 text-sm text-[#536273]">Countdown target: <strong>Uploads open</strong> in Event Settings. Set that date there before enabling this countdown.</p>
          <label class="block text-sm font-semibold">Countdown heading <input v-model="branding.countdown_heading" maxlength="100" class="input mt-2" placeholder="The celebration begins in" /></label>
          <label class="block text-sm font-semibold">Message when countdown finishes <textarea v-model="branding.countdown_finished_message" maxlength="250" rows="2" class="input mt-2" placeholder="The celebration has begun! Welcome!" /></label>
          <div class="rounded-xl border border-[#D6B077] bg-[#FFFDF8] p-4 text-center">
           <p class="text-xs uppercase tracking-widest" :style="{color:themeAccent}">{{branding.countdown_heading||'The celebration begins in'}}</p>
           <p class="mt-2 text-sm font-semibold">Days · Hours · Minutes · Seconds</p>
-          <p class="mt-2 text-xs text-[#536273]">{{countdownPreview}}</p>
+          <p class="mt-2 text-xs text-[#536273]">Uses the existing Uploads open schedule</p>
          </div>
         </template>
        </div>

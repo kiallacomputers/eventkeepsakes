@@ -79,7 +79,7 @@ function heroDesign(b:any){
 function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
 
 const brand=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
-const countdownTargetMs=computed(()=>brand.value.countdown_target?Date.parse(brand.value.countdown_target):NaN)
+const countdownTargetMs=computed(()=>item.value?.upload_starts_at?Date.parse(item.value.upload_starts_at):NaN)
 const countdownActive=computed(()=>unlocked.value&&brand.value.countdown_enabled===true&&Number.isFinite(countdownTargetMs.value))
 const countdownRemaining=computed(()=>Math.max(0,Math.floor((countdownTargetMs.value-now.value)/1000)))
 const countdownParts=computed(()=>{const n=countdownRemaining.value;return [
@@ -212,7 +212,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
    <header v-else class="space-y-3 text-center"><p class="text-sm uppercase tracking-[.3em] text-[#987143]">Capture · Share · Remember</p><h1 class="text-4xl font-bold">{{item.title}}</h1><p v-if="unlocked && brand.welcome_message" class="mx-auto max-w-2xl whitespace-pre-wrap text-[#455364]">{{brand.welcome_message}}</p><p v-if="item.description" class="whitespace-pre-wrap text-[#455364]">{{item.description}}</p></header>
    <section v-if="countdownActive" class="rounded-2xl border border-[#D6B077] bg-[#FFFDF8] px-4 py-6 text-center shadow-sm sm:px-8" aria-label="Event countdown">
     <template v-if="countdownRemaining>0">
-     <p class="text-xs font-semibold uppercase tracking-[.2em]" :style="{color:brandAccent}">{{brand.countdown_heading||'The celebration begins in'}}</p>
+     <p class="text-xs font-semibold uppercase tracking-[.2em]" :style="{color:brandAccent}">{{brand.countdown_heading||'Photo uploads open in'}}</p>
      <div class="mx-auto mt-5 grid max-w-xl grid-cols-4 gap-2 sm:gap-4" role="timer" aria-live="off">
       <div v-for="part in countdownParts" :key="part.label" class="rounded-xl border border-[#E4D8C5] bg-white px-1 py-3 sm:py-5">
        <div class="text-2xl font-bold tabular-nums sm:text-4xl" :style="{color:brandAccent}">{{String(part.value).padStart(2,'0')}}</div>
@@ -222,7 +222,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     </template>
     <div v-else role="status" class="space-y-2">
      <p class="text-xs font-semibold uppercase tracking-[.2em]" :style="{color:brandAccent}">It's time to celebrate</p>
-     <h2 class="text-xl font-bold sm:text-2xl">{{brand.countdown_finished_message||'The celebration has begun! Welcome!'}}</h2>
+     <h2 class="text-xl font-bold sm:text-2xl">{{brand.countdown_finished_message||'Photo uploads are now open! Share your memories with us.'}}</h2>
     </div>
    </section>
    <p v-if="error" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800" role="alert">{{ error }}</p>
