@@ -79,7 +79,7 @@ function heroDesign(b:any){
 function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
 
 const brand=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
-const countdownTargetMs=computed(()=>item.value?.upload_starts_at?Date.parse(item.value.upload_starts_at):NaN)
+const countdownTargetMs=computed(()=>{const date=brand.value.upload_starts_at||item.value?.upload_starts_at;return date?Date.parse(date):NaN})
 const countdownActive=computed(()=>unlocked.value&&brand.value.countdown_enabled===true&&Number.isFinite(countdownTargetMs.value))
 const countdownRemaining=computed(()=>Math.max(0,Math.floor((countdownTargetMs.value-now.value)/1000)))
 const countdownParts=computed(()=>{const n=countdownRemaining.value;return [
