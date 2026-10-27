@@ -103,14 +103,16 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 .ek-sign-qr-light{background:rgba(0,0,0,.65);border-radius:8px}
 .ek-sign-qr-dark{background:rgba(255,255,255,.24);border-radius:8px}.ek-sign-qr img{width:100%;display:block}.ek-sign-action{font-size:clamp(10px,1.4vw,15px);font-weight:700}.ek-sign-footer{font-size:clamp(8px,1vw,12px);color:var(--sign-accent)}
 @media print{
- @page{size:portrait;margin:0}
- html,body,#__nuxt{margin:0!important;padding:0!important;background:white!important}
+ @page{size:A4 portrait;margin:0}
+ @page ek-a5-page{size:A5 portrait;margin:0}
+ html,body,#__nuxt{margin:0!important;padding:0!important;background:white!important;width:100%!important;min-height:0!important;height:auto!important;overflow:visible!important;scrollbar-gutter:auto!important}
  .ek-no-print,body header,body footer,.ek-sign-stage~*,.ek-sign-stage+.panel{display:none!important}
  main{margin:0!important;padding:0!important;max-width:none!important}
  main>div.grid{display:block!important}
  .ek-sign-stage{padding:0!important;margin:0!important;background:white!important;display:block!important;border-radius:0!important}
- .ek-print-sign{width:210mm!important;height:297mm!important;aspect-ratio:auto!important;max-width:none!important;padding:15mm!important;box-shadow:none!important;break-inside:avoid!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
- .ek-print-sign.ek-paper-a5{width:148mm!important;height:210mm!important;padding:10mm!important}
+ .ek-print-sign{box-sizing:border-box!important;width:210mm!important;height:297mm!important;min-height:0!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;padding:15mm!important;box-shadow:none!important;break-inside:avoid!important;break-after:avoid!important;page-break-after:avoid!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .ek-print-sign.ek-paper-a5{page:ek-a5-page;width:148mm!important;height:210mm!important;padding:10mm!important}
+ .ek-sign-inner{box-sizing:border-box!important;min-height:0!important}
  .ek-sign-brand{font-size:26pt!important}.ek-sign-tagline{font-size:9pt!important}.ek-sign-title{font-size:32pt!important}.ek-sign-date{font-size:12pt!important}.ek-sign-heading{font-size:20pt!important}.ek-sign-message{font-size:12pt!important}.ek-sign-qr{width:55%!important;max-width:65mm!important}.ek-sign-action{font-size:12pt!important}.ek-sign-footer{font-size:10pt!important}
  }
 </style>
