@@ -79,6 +79,15 @@ function heroDesign(b:any){
 function heroDecoration(b:any){return ({hearts:'──── ♡ ────',lines:'──────────',floral:'✦ ❀ ✦'} as Record<string,string>)[b.hero_decoration]||''}
 
 const brand=ref<any>({welcome_message:'',gallery_layout:'grid',gallery_theme:'classic',gallery_accent:'#B18A50',cover_url:null})
+const countdownTargetMs=computed(()=>brand.value.countdown_target?Date.parse(brand.value.countdown_target):NaN)
+const countdownActive=computed(()=>unlocked.value&&brand.value.countdown_enabled===true&&Number.isFinite(countdownTargetMs.value))
+const countdownRemaining=computed(()=>Math.max(0,Math.floor((countdownTargetMs.value-now.value)/1000)))
+const countdownParts=computed(()=>{const n=countdownRemaining.value;return [
+ {label:'Days',value:Math.floor(n/86400)},
+ {label:'Hours',value:Math.floor(n%86400/3600)},
+ {label:'Minutes',value:Math.floor(n%3600/60)},
+ {label:'Seconds',value:n%60}
+]})
 const brandAccent=computed(()=>brand.value.gallery_theme==='custom'?brand.value.gallery_accent:({classic:'#B18A50',wedding:'#B58A98',birthday:'#8C67B1',corporate:'#376A86'} as Record<string,string>)[brand.value.gallery_theme]||'#B18A50')
 async function loadBrand(){if(!unlocked.value)return;try{brand.value=await $fetch('/api/guest/branding',{query:{slug}})}catch{/* optional appearance */}}
 const visibleMedia=computed(()=>media.value.filter(m=>galleryFilter.value==='all'||m.media_type===galleryFilter.value))
@@ -183,7 +192,7 @@ async function upload(){
  }finally{busy.value=false}
 }
 function clearCompleted(){if(busy.value)return;for(const x of uploads.value.filter(x=>x.state==='uploaded'))if(x.preview)URL.revokeObjectURL(x.preview);uploads.value=uploads.value.filter(x=>x.state!=='uploaded')}
-onMounted(()=>{timer=setInterval(()=>now.value=Date.now(),30000);window.addEventListener('keydown',galleryKeydown);load()})
+onMounted(()=>{timer=setInterval(()=>now.value=Date.now(),1000);window.addEventListener('keydown',galleryKeydown);load()})
 onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydown',galleryKeydown);cleanupPreviews()})
 </script>
 <template>
@@ -201,6 +210,21 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     </div>
    </header>
    <header v-else class="space-y-3 text-center"><p class="text-sm uppercase tracking-[.3em] text-[#987143]">Capture · Share · Remember</p><h1 class="text-4xl font-bold">{{item.title}}</h1><p v-if="unlocked && brand.welcome_message" class="mx-auto max-w-2xl whitespace-pre-wrap text-[#455364]">{{brand.welcome_message}}</p><p v-if="item.description" class="whitespace-pre-wrap text-[#455364]">{{item.description}}</p></header>
+   <section v-if="countdownActive" class="rounded-2xl border border-[#D6B077] bg-[#FFFDF8] px-4 py-6 text-center shadow-sm sm:px-8" aria-label="Event countdown">
+    <template v-if="countdownRemaining>0">
+     <p class="text-xs font-semibold uppercase tracking-[.2em]" :style="{color:brandAccent}">{{brand.countdown_heading||'The celebration begins in'}}</p>
+     <div class="mx-auto mt-5 grid max-w-xl grid-cols-4 gap-2 sm:gap-4" role="timer" aria-live="off">
+      <div v-for="part in countdownParts" :key="part.label" class="rounded-xl border border-[#E4D8C5] bg-white px-1 py-3 sm:py-5">
+       <div class="text-2xl font-bold tabular-nums sm:text-4xl" :style="{color:brandAccent}">{{String(part.value).padStart(2,'0')}}</div>
+       <div class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#536273] sm:text-xs">{{part.label}}</div>
+      </div>
+     </div>
+    </template>
+    <div v-else role="status" class="space-y-2">
+     <p class="text-xs font-semibold uppercase tracking-[.2em]" :style="{color:brandAccent}">It's time to celebrate</p>
+     <h2 class="text-xl font-bold sm:text-2xl">{{brand.countdown_finished_message||'The celebration has begun! Welcome!'}}</h2>
+    </div>
+   </section>
    <p v-if="error" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800" role="alert">{{ error }}</p>
    <p v-if="notice" class="rounded-lg border border-amber-300 bg-amber-50 p-3" role="status">{{ notice }}</p>
    <form v-if="item.pin_enabled&&!unlocked" class="panel mx-auto max-w-md space-y-4" @submit.prevent="unlock">
