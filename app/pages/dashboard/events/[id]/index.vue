@@ -354,10 +354,6 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
           <button type="button" class="text-sm font-medium text-[#90612E] underline" @click="loadStorage">Refresh storage</button>
         </template>
       </section>
-      <section v-show="activeTab==='qr'" class="panel flex flex-wrap items-center justify-between gap-4" aria-label="QR welcome sign designer">
-        <div><h2 class="text-xl font-semibold text-[#0C1D2D]">QR Welcome Sign Designer</h2><p class="mt-1 text-sm text-[#536273]">Create a personalised A4 or A5 printable sign for your guests.</p></div>
-        <NuxtLink :to="`/dashboard/events/${event.id}/sign`" class="btn">Design Welcome Sign →</NuxtLink>
-      </section>
       <section v-show="activeTab==='media'" class="panel flex flex-wrap items-center justify-between gap-4" aria-label="Guest media management">
         <div>
           <h2 class="text-xl font-semibold text-[#0C1D2D]">Guest Media Management</h2>
@@ -365,8 +361,8 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
         </div>
         <NuxtLink :to="`/dashboard/events/${event.id}/media`" class="btn">Manage Photos &amp; Videos →</NuxtLink>
       </section>
-      <div v-show="['details','schedule','guests','qr'].includes(activeTab)" class="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <form v-show="['details','schedule','guests'].includes(activeTab)" class="panel space-y-5" @submit.prevent="save">
+      <div v-show="['details','schedule','guests','qr'].includes(activeTab)" class="grid min-w-0 gap-6" :class="activeTab==='schedule' || activeTab==='qr' ? 'lg:grid-cols-2' : 'grid-cols-1'">
+        <form v-show="['details','schedule','guests'].includes(activeTab)" class="panel min-w-0 space-y-5" @submit.prevent="save">
           <div v-show="activeTab==='details'" class="space-y-4"><h2 class="text-xl font-semibold">Event details</h2>
           <label class="block text-sm">Event name<input v-model="event.title" maxlength="150" required class="input mt-2" /></label>
           <label class="block text-sm">Description<textarea v-model="event.description" maxlength="3000" rows="3" class="input mt-2" /></label>
@@ -389,13 +385,18 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
           <label class="flex items-center gap-3"><input v-model="event.show_contributor_names" type="checkbox" /> Show contributor names</label>
           </div><button class="btn" :disabled="saving">{{ saving ? 'Saving…' : 'Save settings' }}</button>
         </form>
-        <div class="space-y-6">
+      <section v-show="activeTab==='qr'" class="panel flex flex-wrap items-center justify-between gap-4" aria-label="QR welcome sign designer">
+        <div><h2 class="text-xl font-semibold text-[#0C1D2D]">QR Welcome Sign Designer</h2><p class="mt-1 text-sm text-[#536273]">Create a personalised A4 or A5 printable sign for your guests.</p></div>
+        <NuxtLink :to="`/dashboard/events/${event.id}/sign`" class="btn">Design Welcome Sign →</NuxtLink>
+      </section>
+        <div class="min-w-0 space-y-6">
           <div v-show="activeTab==='qr'" class="panel space-y-4"><h2 class="text-xl font-semibold">Guest QR code</h2>
-            <img v-if="qrDataUrl" :src="qrDataUrl" alt="Event guest link QR code" class="w-full rounded-lg bg-white p-2" />
+            <img v-if="qrDataUrl" :src="qrDataUrl" alt="Event guest link QR code" class="mx-auto block w-full max-w-[320px] rounded-lg bg-white p-2" />
             <input :value="guestUrl" readonly class="input text-xs" aria-label="Guest URL" />
             <div class="flex flex-wrap gap-2"><button type="button" class="btn" @click="copyLink">Copy link</button><button type="button" class="btn" @click="downloadQr">Download QR</button></div>
-            <p class="text-xs text-[#536273]">This QR code is permanent. Guest uploads are available in Phase 3.</p>
+            <p class="text-xs text-[#536273]">This QR code links guests to your event and can be reused on printed signs.</p>
           </div>
+
           <form v-show="activeTab==='schedule'" class="panel space-y-4" @submit.prevent="savePin"><h2 class="text-xl font-semibold">Optional event PIN</h2>
             <p class="text-sm text-[#536273]">{{ event.pin_enabled ? 'A PIN is configured.' : 'No PIN is configured.' }} PIN protection is enforced for guest uploads and galleries.</p>
             <label class="block text-sm">New PIN (4–8 digits)<input v-model="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" class="input mt-2" placeholder="Leave blank to disable" /></label>
