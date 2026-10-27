@@ -17,6 +17,73 @@ async function updateQr(){
 }
 
 
+
+// Per-element typography controls, persisted in each saved poster design.
+type TextKey = 'brand'|'tagline'|'event'|'date'|'heading'|'message'|'action'|'footer'
+type TextStyle = { size:number; color:string; font:string; bold:boolean; italic:boolean; underline:boolean }
+const fontOptions = [
+ {value:'Georgia, serif',label:'Georgia · Elegant serif'},
+ {value:'Arial, sans-serif',label:'Arial · Clean'},
+ {value:'Verdana, sans-serif',label:'Verdana · Modern'},
+ {value:'Tahoma, sans-serif',label:'Tahoma · Compact'},
+ {value:'Trebuchet MS, sans-serif',label:'Trebuchet · Friendly'},
+ {value:'Times New Roman, serif',label:'Times New Roman · Traditional'},
+ {value:'Palatino Linotype, Book Antiqua, Palatino, serif',label:'Palatino · Classic'},
+ {value:'Garamond, Georgia, serif',label:'Garamond · Formal'},
+ {value:'Courier New, monospace',label:'Courier New · Typewriter'},
+ {value:'Impact, sans-serif',label:'Impact · Bold'},
+]
+const typographySections:{key:TextKey;label:string}[]=[
+ {key:'brand',label:'EventKeepsakes logo'},
+ {key:'tagline',label:'Brand tagline'},
+ {key:'event',label:'Event name'},
+ {key:'date',label:'Event date'},
+ {key:'heading',label:'Welcome heading'},
+ {key:'message',label:'Message'},
+ {key:'action',label:'QR instructions'},
+ {key:'footer',label:'Footer'},
+]
+const typography=reactive<Record<TextKey,TextStyle>>({
+ brand:{size:28,color:'#0C1D2D',font:'Georgia, serif',bold:true,italic:false,underline:false},
+ tagline:{size:10,color:'#B18A50',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
+ event:{size:43,color:'#0C1D2D',font:'Georgia, serif',bold:false,italic:false,underline:false},
+ date:{size:15,color:'#B18A50',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
+ heading:{size:26,color:'#0C1D2D',font:'Georgia, serif',bold:false,italic:false,underline:false},
+ message:{size:14,color:'#0C1D2D',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
+ action:{size:15,color:'#0C1D2D',font:'Arial, sans-serif',bold:true,italic:false,underline:false},
+ footer:{size:12,color:'#B18A50',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
+})
+const selectedTypography=ref<TextKey>('event')
+const selectedText=computed(()=>typography[selectedTypography.value])
+const textClassMap:Record<TextKey,string>={brand:'brand',tagline:'tagline',event:'title',date:'date',heading:'heading',message:'message',action:'action',footer:'footer'}
+const signTypographyVars=computed(()=>{
+ const vars:Record<string,string>={}
+ const scale=paper.value==='A5'?0.705:1
+ for(const {key} of typographySections){
+  const t=typography[key]
+  const prefix=`--ek-${textClassMap[key]}`
+  vars[`${prefix}-size`]=`${Math.round(t.size*scale*100)/100}px`
+  vars[`${prefix}-print-size`]=`${Math.round(t.size*0.75*scale*100)/100}pt`
+  vars[`${prefix}-color`]=t.color
+  vars[`${prefix}-font`]=t.font
+  vars[`${prefix}-weight`]=t.bold?'700':'400'
+  vars[`${prefix}-style`]=t.italic?'italic':'normal'
+  vars[`${prefix}-decoration`]=t.underline?'underline':'none'
+ }
+ return vars
+})
+function restoreTypography(raw:any){
+ if(!raw||typeof raw!=='object')return
+ for(const {key} of typographySections){
+  const t=raw[key]
+  if(!t||typeof t!=='object')continue
+  if(Number.isFinite(Number(t.size)))typography[key].size=Math.min(80,Math.max(6,Number(t.size)))
+  if(typeof t.color==='string'&&/^#[0-9a-f]{6}$/i.test(t.color))typography[key].color=t.color
+  if(fontOptions.some(f=>f.value===t.font))typography[key].font=t.font
+  for(const field of ['bold','italic','underline'] as const)if(typeof t[field]==='boolean')typography[key][field]=t[field]
+ }
+}
+
 const heading=ref('Scan & Share Your Memories')
 const message=ref('Help us capture every special moment! Scan the QR code to share your photos and videos.')
 const paper=ref<'A4'|'A5'>('A4')
@@ -28,8 +95,8 @@ const coverUrl=ref<string|null>(null),posterCover=ref<string|null>(null),useCove
 const posterName=ref('Welcome poster'),savedPosters=ref<any[]>([]),posterBusy=ref(false),posterError=ref('')
 async function posterAuth(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in again');return {authorization:`Bearer ${session.access_token}`}}
 async function loadPosterAssets(){try{const headers=await posterAuth();const [branding,posters]=await Promise.all([$fetch<any>('/api/owner/branding',{query:{id:String(route.params.id)},headers}),$fetch<any>('/api/owner/posters',{query:{id:String(route.params.id)},headers})]);coverUrl.value=branding.cover_url;savedPosters.value=posters.designs}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}}
-async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
-function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
+async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
 const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
 
@@ -59,6 +126,31 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
     <label class="block text-sm font-medium">Message<textarea v-model="message" maxlength="260" rows="4" class="input mt-2" /></label>
+
+    <div class="rounded-xl border border-[#D6B077] p-3 space-y-3">
+     <h3 class="font-semibold">Text formatting</h3>
+     <label class="block text-sm font-medium">Choose text element
+      <select v-model="selectedTypography" class="input mt-1">
+       <option v-for="section in typographySections" :key="section.key" :value="section.key">{{section.label}}</option>
+      </select>
+     </label>
+     <label class="block text-sm font-medium">Font family
+      <select v-model="selectedText.font" class="input mt-1"><option v-for="f in fontOptions" :key="f.value" :value="f.value">{{f.label}}</option></select>
+     </label>
+     <label class="block text-sm font-medium">Font size (A4 reference): {{selectedText.size}} px
+      <input v-model.number="selectedText.size" type="range" min="6" max="80" step="1" class="w-full mt-2" />
+     </label>
+     <div class="flex items-center justify-between gap-3">
+      <label class="text-sm font-medium" for="ek-sign-font-colour">Font colour</label>
+      <div class="flex items-center gap-2"><input id="ek-sign-font-colour" v-model="selectedText.color" type="color" class="h-9 w-12 cursor-pointer" /><input v-model="selectedText.color" type="text" maxlength="7" class="input w-28" aria-label="Hex font colour" /></div>
+     </div>
+     <div class="flex flex-wrap gap-3 text-sm">
+      <label class="flex items-center gap-1"><input v-model="selectedText.bold" type="checkbox" /> Bold</label>
+      <label class="flex items-center gap-1"><input v-model="selectedText.italic" type="checkbox" /> Italic</label>
+      <label class="flex items-center gap-1"><input v-model="selectedText.underline" type="checkbox" /> Underline</label>
+     </div>
+     <p class="text-xs text-[#536273]">Each element has independent styling. A5 automatically scales font sizes down. Your choices are saved with the poster.</p>
+    </div>
     <label class="block text-sm font-medium">QR code colour
      <select v-model="qrColourMode" class="input mt-2">
       <option value="auto">Automatic (matches sign background)</option>
@@ -87,7 +179,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
    </section>
    <div class="ek-sign-stage flex flex-col items-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
     <p class="mb-3 text-center text-xs font-semibold text-[#536273]">{{paper}} portrait preview · {{paper==='A4'?'210 × 297 mm':'148 × 210 mm'}} · scaled to fit screen</p>
-    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{}" aria-label="Printable event welcome sign">
+    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
       <div class="ek-sign-inner" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
        <div class="ek-sign-tagline">CAPTURE · SHARE · REMEMBER</div>
@@ -159,5 +251,25 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
  .ek-paper-a5 .ek-sign-qr{width:48%!important;max-width:46mm!important;padding:2%!important}
  .ek-paper-a5 .ek-sign-action{font-size:8.5pt!important}
  .ek-paper-a5 .ek-sign-footer{font-size:7pt!important}
+}
+
+/* Per-element font styling, shared by preview and PDF print output. */
+.ek-print-sign .ek-sign-brand{font-family:var(--ek-brand-font)!important;font-size:var(--ek-brand-size)!important;color:var(--ek-brand-color)!important;font-weight:var(--ek-brand-weight)!important;font-style:var(--ek-brand-style)!important;text-decoration:var(--ek-brand-decoration)!important}
+.ek-print-sign .ek-sign-tagline{font-family:var(--ek-tagline-font)!important;font-size:var(--ek-tagline-size)!important;color:var(--ek-tagline-color)!important;font-weight:var(--ek-tagline-weight)!important;font-style:var(--ek-tagline-style)!important;text-decoration:var(--ek-tagline-decoration)!important}
+.ek-print-sign .ek-sign-title{font-family:var(--ek-title-font)!important;font-size:var(--ek-title-size)!important;color:var(--ek-title-color)!important;font-weight:var(--ek-title-weight)!important;font-style:var(--ek-title-style)!important;text-decoration:var(--ek-title-decoration)!important}
+.ek-print-sign .ek-sign-date{font-family:var(--ek-date-font)!important;font-size:var(--ek-date-size)!important;color:var(--ek-date-color)!important;font-weight:var(--ek-date-weight)!important;font-style:var(--ek-date-style)!important;text-decoration:var(--ek-date-decoration)!important}
+.ek-print-sign .ek-sign-heading{font-family:var(--ek-heading-font)!important;font-size:var(--ek-heading-size)!important;color:var(--ek-heading-color)!important;font-weight:var(--ek-heading-weight)!important;font-style:var(--ek-heading-style)!important;text-decoration:var(--ek-heading-decoration)!important}
+.ek-print-sign .ek-sign-message{font-family:var(--ek-message-font)!important;font-size:var(--ek-message-size)!important;color:var(--ek-message-color)!important;font-weight:var(--ek-message-weight)!important;font-style:var(--ek-message-style)!important;text-decoration:var(--ek-message-decoration)!important}
+.ek-print-sign .ek-sign-action{font-family:var(--ek-action-font)!important;font-size:var(--ek-action-size)!important;color:var(--ek-action-color)!important;font-weight:var(--ek-action-weight)!important;font-style:var(--ek-action-style)!important;text-decoration:var(--ek-action-decoration)!important}
+.ek-print-sign .ek-sign-footer{font-family:var(--ek-footer-font)!important;font-size:var(--ek-footer-size)!important;color:var(--ek-footer-color)!important;font-weight:var(--ek-footer-weight)!important;font-style:var(--ek-footer-style)!important;text-decoration:var(--ek-footer-decoration)!important}
+@media print {
+.ek-print-sign .ek-sign-brand{font-size:var(--ek-brand-print-size)!important}
+.ek-print-sign .ek-sign-tagline{font-size:var(--ek-tagline-print-size)!important}
+.ek-print-sign .ek-sign-title{font-size:var(--ek-title-print-size)!important}
+.ek-print-sign .ek-sign-date{font-size:var(--ek-date-print-size)!important}
+.ek-print-sign .ek-sign-heading{font-size:var(--ek-heading-print-size)!important}
+.ek-print-sign .ek-sign-message{font-size:var(--ek-message-print-size)!important}
+.ek-print-sign .ek-sign-action{font-size:var(--ek-action-print-size)!important}
+.ek-print-sign .ek-sign-footer{font-size:var(--ek-footer-print-size)!important}
 }
 </style>
