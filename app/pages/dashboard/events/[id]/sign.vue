@@ -84,7 +84,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
        <h2 class="ek-sign-title">{{item.title}}</h2>
        <p v-if="showDate&&dateLabel" class="ek-sign-date">{{dateLabel}}</p>
        <h3 class="ek-sign-heading">{{heading}}</h3>
-       <p class="ek-sign-message">{{message}}</p>
+       <p class="ek-sign-message" style="white-space:pre-line;overflow-wrap:anywhere">{{message}}</p>
        <div class="ek-sign-qr" :class="qrInk==='#FFFFFF'?'ek-sign-qr-light':'ek-sign-qr-dark'"><img :src="qr"  alt="QR code linking to event guest upload page" /></div>
        <p class="ek-sign-action">Point your phone camera here</p>
        <p class="ek-sign-footer">No app or account required</p>
