@@ -22,7 +22,7 @@ async function updateQr(){
 type TextKey = 'brand'|'tagline'|'event'|'date'|'heading'|'message'|'action'|'footer'
 type TextStyle = { size:number; color:string; font:string; bold:boolean; italic:boolean; underline:boolean }
 const fontOptions = [
- {value:'Georgia, serif',label:'Georgia · Elegant serif'},
+{value:'Georgia, serif',label:'Georgia · Elegant serif'},
  {value:'Arial, sans-serif',label:'Arial · Clean'},
  {value:'Verdana, sans-serif',label:'Verdana · Modern'},
  {value:'Tahoma, sans-serif',label:'Tahoma · Compact'},
@@ -32,7 +32,115 @@ const fontOptions = [
  {value:'Garamond, Georgia, serif',label:'Garamond · Formal'},
  {value:'Courier New, monospace',label:'Courier New · Typewriter'},
  {value:'Impact, sans-serif',label:'Impact · Bold'},
+ {value:"'Great Vibes', cursive",label:'Great Vibes',family:'Great Vibes',category:'Calligraphy & Wedding'},
+ {value:"'Allura', cursive",label:'Allura',family:'Allura',category:'Calligraphy & Wedding'},
+ {value:"'Alex Brush', cursive",label:'Alex Brush',family:'Alex Brush',category:'Calligraphy & Wedding'},
+ {value:"'Parisienne', cursive",label:'Parisienne',family:'Parisienne',category:'Calligraphy & Wedding'},
+ {value:"'Pinyon Script', cursive",label:'Pinyon Script',family:'Pinyon Script',category:'Calligraphy & Wedding'},
+ {value:"'Tangerine', cursive",label:'Tangerine',family:'Tangerine',category:'Calligraphy & Wedding'},
+ {value:"'Italianno', cursive",label:'Italianno',family:'Italianno',category:'Calligraphy & Wedding'},
+ {value:"'Monsieur La Doulaise', cursive",label:'Monsieur La Doulaise',family:'Monsieur La Doulaise',category:'Calligraphy & Wedding'},
+ {value:"'Mrs Saint Delafield', cursive",label:'Mrs Saint Delafield',family:'Mrs Saint Delafield',category:'Calligraphy & Wedding'},
+ {value:"'Qwigley', cursive",label:'Qwigley',family:'Qwigley',category:'Calligraphy & Wedding'},
+ {value:"'Ballet', cursive",label:'Ballet',family:'Ballet',category:'Calligraphy & Wedding'},
+ {value:"'Arizonia', cursive",label:'Arizonia',family:'Arizonia',category:'Calligraphy & Wedding'},
+ {value:"'Mea Culpa', cursive",label:'Mea Culpa',family:'Mea Culpa',category:'Calligraphy & Wedding'},
+ {value:"'Corinthia', cursive",label:'Corinthia',family:'Corinthia',category:'Calligraphy & Wedding'},
+ {value:"'Petit Formal Script', cursive",label:'Petit Formal Script',family:'Petit Formal Script',category:'Calligraphy & Wedding'},
+ {value:"'Ephesis', cursive",label:'Ephesis',family:'Ephesis',category:'Calligraphy & Wedding'},
+ {value:"'Dancing Script', cursive",label:'Dancing Script',family:'Dancing Script',category:'Handwritten & Casual'},
+ {value:"'Sacramento', cursive",label:'Sacramento',family:'Sacramento',category:'Handwritten & Casual'},
+ {value:"'Caveat', cursive",label:'Caveat',family:'Caveat',category:'Handwritten & Casual'},
+ {value:"'Pacifico', cursive",label:'Pacifico',family:'Pacifico',category:'Handwritten & Casual'},
+ {value:"'Satisfy', cursive",label:'Satisfy',family:'Satisfy',category:'Handwritten & Casual'},
+ {value:"'Cookie', cursive",label:'Cookie',family:'Cookie',category:'Handwritten & Casual'},
+ {value:"'Handlee', cursive",label:'Handlee',family:'Handlee',category:'Handwritten & Casual'},
+ {value:"'Patrick Hand', cursive",label:'Patrick Hand',family:'Patrick Hand',category:'Handwritten & Casual'},
+ {value:"'Kalam', cursive",label:'Kalam',family:'Kalam',category:'Handwritten & Casual'},
+ {value:"'Indie Flower', cursive",label:'Indie Flower',family:'Indie Flower',category:'Handwritten & Casual'},
+ {value:"'Shadows Into Light', cursive",label:'Shadows Into Light',family:'Shadows Into Light',category:'Handwritten & Casual'},
+ {value:"'Amatic SC', cursive",label:'Amatic SC',family:'Amatic SC',category:'Handwritten & Casual'},
+ {value:"'Gloria Hallelujah', cursive",label:'Gloria Hallelujah',family:'Gloria Hallelujah',category:'Handwritten & Casual'},
+ {value:"'Permanent Marker', cursive",label:'Permanent Marker',family:'Permanent Marker',category:'Handwritten & Casual'},
+ {value:"'Reenie Beanie', cursive",label:'Reenie Beanie',family:'Reenie Beanie',category:'Handwritten & Casual'},
+ {value:"'Playfair Display', serif",label:'Playfair Display',family:'Playfair Display',category:'Elegant & Classic'},
+ {value:"'Cormorant Garamond', serif",label:'Cormorant Garamond',family:'Cormorant Garamond',category:'Elegant & Classic'},
+ {value:"'Cinzel', serif",label:'Cinzel',family:'Cinzel',category:'Elegant & Classic'},
+ {value:"'Cinzel Decorative', serif",label:'Cinzel Decorative',family:'Cinzel Decorative',category:'Elegant & Classic'},
+ {value:"'DM Serif Display', serif",label:'DM Serif Display',family:'DM Serif Display',category:'Elegant & Classic'},
+ {value:"'Libre Baskerville', serif",label:'Libre Baskerville',family:'Libre Baskerville',category:'Elegant & Classic'},
+ {value:"'Lora', serif",label:'Lora',family:'Lora',category:'Elegant & Classic'},
+ {value:"'Merriweather', serif",label:'Merriweather',family:'Merriweather',category:'Elegant & Classic'},
+ {value:"'EB Garamond', serif",label:'EB Garamond',family:'EB Garamond',category:'Elegant & Classic'},
+ {value:"'Bodoni Moda', serif",label:'Bodoni Moda',family:'Bodoni Moda',category:'Elegant & Classic'},
+ {value:"'Prata', serif",label:'Prata',family:'Prata',category:'Elegant & Classic'},
+ {value:"'Abril Fatface', serif",label:'Abril Fatface',family:'Abril Fatface',category:'Elegant & Classic'},
+ {value:"'Yeseva One', serif",label:'Yeseva One',family:'Yeseva One',category:'Elegant & Classic'},
+ {value:"'Marcellus', serif",label:'Marcellus',family:'Marcellus',category:'Elegant & Classic'},
+ {value:"'Italiana', serif",label:'Italiana',family:'Italiana',category:'Elegant & Classic'},
+ {value:"'Gilda Display', serif",label:'Gilda Display',family:'Gilda Display',category:'Elegant & Classic'},
+ {value:"'Montserrat', sans-serif",label:'Montserrat',family:'Montserrat',category:'Modern & Minimal'},
+ {value:"'Poppins', sans-serif",label:'Poppins',family:'Poppins',category:'Modern & Minimal'},
+ {value:"'Raleway', sans-serif",label:'Raleway',family:'Raleway',category:'Modern & Minimal'},
+ {value:"'Lato', sans-serif",label:'Lato',family:'Lato',category:'Modern & Minimal'},
+ {value:"'Roboto', sans-serif",label:'Roboto',family:'Roboto',category:'Modern & Minimal'},
+ {value:"'Open Sans', sans-serif",label:'Open Sans',family:'Open Sans',category:'Modern & Minimal'},
+ {value:"'Inter', sans-serif",label:'Inter',family:'Inter',category:'Modern & Minimal'},
+ {value:"'Nunito', sans-serif",label:'Nunito',family:'Nunito',category:'Modern & Minimal'},
+ {value:"'Quicksand', sans-serif",label:'Quicksand',family:'Quicksand',category:'Modern & Minimal'},
+ {value:"'Josefin Sans', sans-serif",label:'Josefin Sans',family:'Josefin Sans',category:'Modern & Minimal'},
+ {value:"'Work Sans', sans-serif",label:'Work Sans',family:'Work Sans',category:'Modern & Minimal'},
+ {value:"'Outfit', sans-serif",label:'Outfit',family:'Outfit',category:'Modern & Minimal'},
+ {value:"'Manrope', sans-serif",label:'Manrope',family:'Manrope',category:'Modern & Minimal'},
+ {value:"'DM Sans', sans-serif",label:'DM Sans',family:'DM Sans',category:'Modern & Minimal'},
+ {value:"'Urbanist', sans-serif",label:'Urbanist',family:'Urbanist',category:'Modern & Minimal'},
+ {value:"'Bebas Neue', sans-serif",label:'Bebas Neue',family:'Bebas Neue',category:'Bold & Celebration'},
+ {value:"'Anton', sans-serif",label:'Anton',family:'Anton',category:'Bold & Celebration'},
+ {value:"'Oswald', sans-serif",label:'Oswald',family:'Oswald',category:'Bold & Celebration'},
+ {value:"'Lobster', sans-serif",label:'Lobster',family:'Lobster',category:'Bold & Celebration'},
+ {value:"'Righteous', sans-serif",label:'Righteous',family:'Righteous',category:'Bold & Celebration'},
+ {value:"'Fredoka', sans-serif",label:'Fredoka',family:'Fredoka',category:'Bold & Celebration'},
+ {value:"'Bangers', sans-serif",label:'Bangers',family:'Bangers',category:'Bold & Celebration'},
+ {value:"'Luckiest Guy', sans-serif",label:'Luckiest Guy',family:'Luckiest Guy',category:'Bold & Celebration'},
+ {value:"'Alfa Slab One', sans-serif",label:'Alfa Slab One',family:'Alfa Slab One',category:'Bold & Celebration'},
+ {value:"'Patua One', sans-serif",label:'Patua One',family:'Patua One',category:'Bold & Celebration'},
+ {value:"'Lilita One', sans-serif",label:'Lilita One',family:'Lilita One',category:'Bold & Celebration'},
+ {value:"'Baloo 2', sans-serif",label:'Baloo 2',family:'Baloo 2',category:'Bold & Celebration'},
+ {value:"'Chewy', sans-serif",label:'Chewy',family:'Chewy',category:'Bold & Celebration'},
+ {value:"'Fugaz One', sans-serif",label:'Fugaz One',family:'Fugaz One',category:'Bold & Celebration'},
+ {value:"'Titan One', sans-serif",label:'Titan One',family:'Titan One',category:'Bold & Celebration'},
+ {value:"'Special Elite', serif",label:'Special Elite',family:'Special Elite',category:'Vintage & Retro'},
+ {value:"'Rye', serif",label:'Rye',family:'Rye',category:'Vintage & Retro'},
+ {value:"'Bree Serif', serif",label:'Bree Serif',family:'Bree Serif',category:'Vintage & Retro'},
+ {value:"'Berkshire Swash', serif",label:'Berkshire Swash',family:'Berkshire Swash',category:'Vintage & Retro'},
+ {value:"'Unica One', serif",label:'Unica One',family:'Unica One',category:'Vintage & Retro'},
+ {value:"'Limelight', serif",label:'Limelight',family:'Limelight',category:'Vintage & Retro'},
+ {value:"'Playball', serif",label:'Playball',family:'Playball',category:'Vintage & Retro'},
+ {value:"'Courgette', serif",label:'Courgette',family:'Courgette',category:'Vintage & Retro'},
+ {value:"'Lobster Two', serif",label:'Lobster Two',family:'Lobster Two',category:'Vintage & Retro'},
+ {value:"'Sail', serif",label:'Sail',family:'Sail',category:'Vintage & Retro'},
+ {value:"'Oleo Script', serif",label:'Oleo Script',family:'Oleo Script',category:'Vintage & Retro'},
+ {value:"'Grand Hotel', serif",label:'Grand Hotel',family:'Grand Hotel',category:'Vintage & Retro'},
+ {value:"'Yellowtail', serif",label:'Yellowtail',family:'Yellowtail',category:'Vintage & Retro'},
+ {value:"'Kaushan Script', serif",label:'Kaushan Script',family:'Kaushan Script',category:'Vintage & Retro'},
+ {value:"'Bubblegum Sans', sans-serif",label:'Bubblegum Sans',family:'Bubblegum Sans',category:'Playful & Kids'},
+ {value:"'Comic Neue', sans-serif",label:'Comic Neue',family:'Comic Neue',category:'Playful & Kids'},
+ {value:"'Sniglet', sans-serif",label:'Sniglet',family:'Sniglet',category:'Playful & Kids'},
+ {value:"'Concert One', sans-serif",label:'Concert One',family:'Concert One',category:'Playful & Kids'},
+ {value:"'Short Stack', sans-serif",label:'Short Stack',family:'Short Stack',category:'Playful & Kids'},
+ {value:"'Schoolbell', sans-serif",label:'Schoolbell',family:'Schoolbell',category:'Playful & Kids'},
+ {value:"'Coming Soon', sans-serif",label:'Coming Soon',family:'Coming Soon',category:'Playful & Kids'},
+ {value:"'Itim', sans-serif",label:'Itim',family:'Itim',category:'Playful & Kids'},
+ {value:"'Mali', sans-serif",label:'Mali',family:'Mali',category:'Playful & Kids'},
+ {value:"'Finger Paint', sans-serif",label:'Finger Paint',family:'Finger Paint',category:'Playful & Kids'},
+ {value:"'Fredericka the Great', sans-serif",label:'Fredericka the Great',family:'Fredericka the Great',category:'Playful & Kids'},
+ {value:"'Cabin Sketch', sans-serif",label:'Cabin Sketch',family:'Cabin Sketch',category:'Playful & Kids'},
+ {value:"'Love Ya Like A Sister', sans-serif",label:'Love Ya Like A Sister',family:'Love Ya Like A Sister',category:'Playful & Kids'},
+ {value:"'Henny Penny', sans-serif",label:'Henny Penny',family:'Henny Penny',category:'Playful & Kids'},
 ]
+const fontCategories = ['System fonts','Calligraphy & Wedding','Handwritten & Casual','Elegant & Classic','Modern & Minimal','Bold & Celebration','Vintage & Retro','Playful & Kids']
+const fontsByCategory = computed(()=>fontCategories.map(label=>({label,fonts:fontOptions.filter(f=>(f.category||'System fonts')===label)})))
+
 const typographySections:{key:TextKey;label:string}[]=[
  {key:'brand',label:'EventKeepsakes logo'},
  {key:'tagline',label:'Brand tagline'},
@@ -54,6 +162,11 @@ const typography=reactive<Record<TextKey,TextStyle>>({
  footer:{size:12,color:'#B18A50',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
 })
 const selectedTypography=ref<TextKey>('event')
+// Load only fonts currently used on the poster, avoiding a large upfront download.
+const selectedWebFonts=computed(()=>[...new Set(Object.values(typography).map(t=>fontOptions.find(f=>f.value===t.font)?.family).filter((f):f is string=>!!f))])
+const fontStylesheetUrl=computed(()=>selectedWebFonts.value.length?'https://fonts.googleapis.com/css2?'+selectedWebFonts.value.map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
+useHead(()=>({link:fontStylesheetUrl.value?[{key:'sign-fonts',rel:'stylesheet',href:fontStylesheetUrl.value}]:[]}))
+
 const selectedText=computed(()=>typography[selectedTypography.value])
 const textClassMap:Record<TextKey,string>={brand:'brand',tagline:'tagline',event:'title',date:'date',heading:'heading',message:'message',action:'action',footer:'footer'}
 const signTypographyVars=computed(()=>{
@@ -112,7 +225,16 @@ onMounted(async()=>{
  await loadPosterAssets()
  loading.value=false
 })
-function printSign(){window.print()}
+async function printSign(){
+ // Ensure selected web fonts are loaded before the browser captures the PDF.
+ if(import.meta.client){
+  try {
+   await Promise.all(selectedWebFonts.value.map(f=>document.fonts.load(`16px "${f}"`)))
+   await document.fonts.ready
+  } catch(e){console.warn('Some poster fonts could not load before printing',e)}
+  window.print()
+ }
+}
 async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value);dialog.show('Guest link copied.','success')}catch{dialog.show('Unable to copy the link.','error')}}
 </script>
 <template>
@@ -135,7 +257,12 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
       </select>
      </label>
      <label class="block text-sm font-medium">Font family
-      <select v-model="selectedText.font" class="input mt-1"><option v-for="f in fontOptions" :key="f.value" :value="f.value">{{f.label}}</option></select>
+      <select v-model="selectedText.font" class="input mt-1">
+       <optgroup v-for="group in fontsByCategory" :key="group.label" :label="group.label">
+        <option v-for="f in group.fonts" :key="f.value" :value="f.value">{{f.label}}</option>
+       </optgroup>
+      </select>
+      <p class="text-xs text-[#536273]">Over 100 free fonts grouped by occasion. Fonts load when selected; allow a moment before printing.</p>
      </label>
      <label class="block text-sm font-medium">Font size (A4 reference): {{selectedText.size}} px
       <input v-model.number="selectedText.size" type="range" min="6" max="80" step="1" class="w-full mt-2" />
