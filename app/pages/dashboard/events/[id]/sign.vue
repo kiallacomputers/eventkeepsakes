@@ -130,4 +130,34 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
  .ek-print-sign.ek-sign-photo-fill{padding:0!important;background-size:cover!important;background-position:center!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
  .ek-print-sign.ek-sign-photo-fill .ek-sign-inner{margin:5%!important;height:90%!important}
 }
+
+/* A5 is 70.5% of A4's linear size. Scale the content as well as the paper. */
+@media screen {
+ .ek-print-sign.ek-paper-a5{padding:4.9%}
+ .ek-paper-a5 .ek-sign-inner{padding:5%;gap:.6%}
+ .ek-paper-a5 .ek-sign-brand{font-size:clamp(11px,1.9vw,20px)}
+ .ek-paper-a5 .ek-sign-tagline{font-size:clamp(5px,.6vw,7px);letter-spacing:.16em}
+ .ek-paper-a5 .ek-sign-ornament{font-size:13px}
+ .ek-paper-a5 .ek-sign-title{font-size:clamp(16px,2.8vw,30px)}
+ .ek-paper-a5 .ek-sign-date{font-size:clamp(8px,1vw,11px)}
+ .ek-paper-a5 .ek-sign-heading{font-size:clamp(11px,1.7vw,18px)}
+ .ek-paper-a5 .ek-sign-message{font-size:clamp(8px,.95vw,10px);line-height:1.35}
+ .ek-paper-a5 .ek-sign-qr{width:48%;max-width:162px;padding:2%}
+ .ek-paper-a5 .ek-sign-action{font-size:clamp(8px,1vw,11px)}
+ .ek-paper-a5 .ek-sign-footer{font-size:clamp(7px,.7vw,9px)}
+}
+@media print {
+ .ek-print-sign.ek-paper-a5{padding:10mm!important}
+ .ek-paper-a5 .ek-sign-inner{padding:5%!important;gap:.6%!important}
+ .ek-paper-a5 .ek-sign-brand{font-size:18pt!important}
+ .ek-paper-a5 .ek-sign-tagline{font-size:6.3pt!important}
+ .ek-paper-a5 .ek-sign-ornament{font-size:13px!important}
+ .ek-paper-a5 .ek-sign-title{font-size:22.5pt!important}
+ .ek-paper-a5 .ek-sign-date{font-size:8.5pt!important}
+ .ek-paper-a5 .ek-sign-heading{font-size:14pt!important}
+ .ek-paper-a5 .ek-sign-message{font-size:8.5pt!important;line-height:1.35!important}
+ .ek-paper-a5 .ek-sign-qr{width:48%!important;max-width:46mm!important;padding:2%!important}
+ .ek-paper-a5 .ek-sign-action{font-size:8.5pt!important}
+ .ek-paper-a5 .ek-sign-footer{font-size:7pt!important}
+}
 </style>
