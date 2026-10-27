@@ -15,7 +15,7 @@ async function updateQr(){
  if(!guestUrl.value)return
  qr.value=await QRCode.toDataURL(guestUrl.value,{width:1200,margin:4,errorCorrectionLevel:'H',color:{dark:qrInk.value,light:'#00000000'}})
 }
-watch([guestUrl,qrInk],()=>{void updateQr()})
+
 
 const heading=ref('Scan & Share Your Memories')
 const message=ref('Help us capture every special moment! Scan the QR code to share your photos and videos.')
@@ -32,6 +32,7 @@ const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
 
 const guestUrl=computed(()=>item.value?`${origin.value}/e/${encodeURIComponent(item.value.slug)}`:'')
+watch([guestUrl,qrInk],()=>{void updateQr()})
 const dateLabel=computed(()=>item.value?.event_date?new Date(`${item.value.event_date}T12:00:00`).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}):'')
 useHead({title:'Welcome Sign Designer · EventKeepsakes'})
 onMounted(async()=>{
