@@ -108,6 +108,9 @@ function shiftMedia(delta:number){if(activeMedia.value!==null&&visibleMedia.valu
 function galleryKeydown(e:KeyboardEvent){if(activeMedia.value===null)return;if(e.key==='Escape')closeMedia();else if(e.key==='ArrowRight')shiftMedia(1);else if(e.key==='ArrowLeft')shiftMedia(-1)}
 let timer:ReturnType<typeof setInterval>|undefined
 const canUpload=computed(()=>item.value?.status==='active'&&(!item.value.upload_starts_at||now.value>=Date.parse(item.value.upload_starts_at))&&(!item.value.upload_ends_at||now.value<=Date.parse(item.value.upload_ends_at)))
+// The existing upload schedule is the single source of truth for guest visibility.
+const uploadsNotYetOpen=computed(()=>{const t=item.value?.upload_starts_at?Date.parse(item.value.upload_starts_at):NaN;return Number.isFinite(t)&&now.value<t})
+const uploadsFinished=computed(()=>{const t=item.value?.upload_ends_at?Date.parse(item.value.upload_ends_at):NaN;return Number.isFinite(t)&&now.value>t})
 const canBrowse=computed(()=>item.value?.gallery_visibility==='shared'&&unlocked.value)
 useHead({title:'Share memories · EventKeepsakes'})
 async function load(){
@@ -225,6 +228,10 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
      <h2 class="text-xl font-bold sm:text-2xl">{{brand.countdown_finished_message||'Photo uploads are now open! Share your memories with us.'}}</h2>
     </div>
    </section>
+    <section v-if="unlocked && uploadsNotYetOpen && !countdownActive" class="rounded-2xl border border-[#D6B077] bg-[#FFFDF8] px-5 py-7 text-center" role="status">
+     <h2 class="text-xl font-semibold" :style="{color:brandAccent}">Photo uploads aren't open yet</h2>
+     <p class="mt-2 text-sm text-[#536273]">Please come back when the organiser's upload window opens.</p>
+    </section>
    <p v-if="error" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800" role="alert">{{ error }}</p>
    <p v-if="notice" class="rounded-lg border border-amber-300 bg-amber-50 p-3" role="status">{{ notice }}</p>
    <form v-if="item.pin_enabled&&!unlocked" class="panel mx-auto max-w-md space-y-4" @submit.prevent="unlock">
@@ -233,13 +240,13 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     <button class="btn w-full" :disabled="busy">{{busy?'Checking…':'Enter event'}}</button>
    </form>
    <template v-else>
-    <section class="panel space-y-5" aria-label="Guest memory uploads">
+    <section v-if="!uploadsNotYetOpen" class="panel space-y-5" aria-label="Guest memory uploads">
      <div class="space-y-2 text-center">
       <p class="text-xs font-semibold uppercase tracking-[.2em] text-[#987143]">Your memories matter</p>
       <h2 class="text-2xl font-semibold text-[#0C1D2D]">{{uploadIntroTitle}}</h2>
       <p class="text-sm text-[#536273]">{{uploadInstructions}}</p>
      </div>
-     <div v-if="showThankYou" class="rounded-2xl border border-[#D6B077] bg-[#FFFDF8] px-5 py-8 text-center" role="status" aria-live="polite">
+     <div v-if="showThankYou && canUpload" class="rounded-2xl border border-[#D6B077] bg-[#FFFDF8] px-5 py-8 text-center" role="status" aria-live="polite">
       <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-3xl text-emerald-700" aria-hidden="true">✓</div>
       <p class="mt-4 text-xs font-semibold uppercase tracking-widest" :style="{color:brandAccent}">Upload complete · {{completedThisBatch}} {{completedThisBatch===1?'memory':'memories'}}</p>
       <h3 class="mt-2 text-2xl font-bold">{{thankYouTitle}}</h3>
@@ -250,7 +257,8 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
        <button v-if="item.gallery_visibility==='shared'" type="button" class="rounded-lg border border-[#D6B077] px-4 py-2 text-sm font-semibold" @click="viewMemories">View gallery</button>
       </div>
      </div>
-     <p v-if="!canUpload" class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-[#6F5433]">Uploads are currently closed. The organiser controls the upload window.</p>
+     <p v-if="!canUpload && uploadsFinished" class="rounded-lg border border-[#D6B077] bg-[#FFFDF8] p-4 text-center text-[#6F5433]" role="status">Thank you for sharing your memories. Photo uploads for this event have now closed.</p>
+      <p v-else-if="!canUpload" class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-[#6F5433]" role="status">Photo uploads are currently unavailable. Please check back with the event organiser.</p>
      <form v-else-if="!showThankYou" class="space-y-4" @submit.prevent="upload">
       <label v-if="item.guest_name_mode!=='disabled'" class="block text-sm font-semibold" for="guest-name">Your name {{item.guest_name_mode==='required'?'(required)':'(optional)'}}
        <input id="guest-name" v-model="guestName" class="input mt-2" maxlength="120" :required="item.guest_name_mode==='required'" placeholder="Your name" />
@@ -305,7 +313,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
       </div>
      </div>
     </section>
-    <section v-else class="panel"><h2 class="text-xl font-semibold">Private gallery</h2><p class="mt-2 text-[#536273]">Only the event organiser can view uploaded media.</p></section>
+    <section v-else-if="!uploadsNotYetOpen" class="panel"><h2 class="text-xl font-semibold">Private gallery</h2><p class="mt-2 text-[#536273]">Only the event organiser can view uploaded media.</p></section>
    </template>
   </div>
   <p v-else class="text-red-700">{{error||'Event not found'}}</p>
