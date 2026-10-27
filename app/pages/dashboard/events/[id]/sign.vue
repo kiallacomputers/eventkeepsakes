@@ -85,7 +85,8 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
    </section>
-   <div class="ek-sign-stage flex justify-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
+   <div class="ek-sign-stage flex flex-col items-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
+    <p class="mb-3 text-center text-xs font-semibold text-[#536273]">{{paper}} portrait preview · {{paper==='A4'?'210 × 297 mm':'148 × 210 mm'}} · scaled to fit screen</p>
     <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{}" aria-label="Printable event welcome sign">
       <div class="ek-sign-inner" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
@@ -105,11 +106,11 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
  </main>
 </template>
 <style>
-.ek-print-sign{--sign-ink:#0C1D2D;--sign-accent:#B18A50;--sign-bg:#F8F4EB;box-sizing:border-box;width:min(100%,520px);aspect-ratio:210/297;background:var(--sign-bg);color:var(--sign-ink);padding:7%;box-shadow:0 10px 35px #0C1D2D25;text-align:center;overflow:hidden}
-.ek-paper-a5{width:min(100%,390px)}.ek-sign-romance{--sign-ink:#513F48;--sign-accent:#B7828C;--sign-bg:#FFF9F5}.ek-sign-modern{--sign-ink:#19242D;--sign-accent:#516A78;--sign-bg:#FFFFFF}
+.ek-print-sign{--sign-ink:#0C1D2D;--sign-accent:#B18A50;--sign-bg:#F8F4EB;box-sizing:border-box;width:min(100%,520px);height:auto;aspect-ratio:210/297;flex:none;background:var(--sign-bg);color:var(--sign-ink);padding:7%;box-shadow:0 10px 35px #0C1D2D25;text-align:center;overflow:hidden}
+.ek-print-sign.ek-paper-a5{width:min(100%,366.5px);aspect-ratio:148/210}.ek-sign-romance{--sign-ink:#513F48;--sign-accent:#B7828C;--sign-bg:#FFF9F5}.ek-sign-modern{--sign-ink:#19242D;--sign-accent:#516A78;--sign-bg:#FFFFFF}
 .ek-print-sign.ek-sign-photo-fill{padding:0!important}
 .ek-sign-photo-fill .ek-sign-inner{margin:5%;height:90%;background:transparent}
-.ek-sign-inner{height:100%;border:2px solid var(--sign-accent);padding:7%;display:flex;flex-direction:column;align-items:center;justify-content:space-around;gap:1%}
+.ek-sign-inner{height:100%;min-height:0;box-sizing:border-box;border:2px solid var(--sign-accent);padding:7%;display:flex;flex-direction:column;align-items:center;justify-content:space-around;gap:1%}
 .ek-sign-brand{font-family:Georgia,serif;font-weight:bold;font-size:clamp(16px,2.7vw,28px)}.ek-sign-brand span{color:var(--sign-accent)}.ek-sign-tagline{font-size:clamp(6px,.85vw,10px);letter-spacing:.23em;color:var(--sign-accent)}.ek-sign-ornament{color:var(--sign-accent);font-size:18px}.ek-sign-title{font-family:Georgia,serif;font-size:clamp(22px,4vw,43px);line-height:1.14;overflow-wrap:anywhere}.ek-sign-date{color:var(--sign-accent);font-size:clamp(10px,1.4vw,15px)}.ek-sign-heading{font-family:Georgia,serif;font-size:clamp(15px,2.4vw,26px);line-height:1.15}.ek-sign-message{font-size:clamp(10px,1.3vw,14px);line-height:1.5;overflow-wrap:anywhere}.ek-sign-qr{background:transparent;padding:3%;width:52%;max-width:230px}
 .ek-sign-qr-light{background:rgba(0,0,0,.65);border-radius:8px}
 .ek-sign-qr-dark{background:rgba(255,255,255,.24);border-radius:8px}.ek-sign-qr img{width:100%;display:block}.ek-sign-action{font-size:clamp(10px,1.4vw,15px);font-weight:700}.ek-sign-footer{font-size:clamp(8px,1vw,12px);color:var(--sign-accent)}
