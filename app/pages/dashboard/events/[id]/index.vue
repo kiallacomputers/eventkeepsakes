@@ -410,3 +410,11 @@ onMounted(() => { windowOrigin.value = window.location.origin; load(); loadStora
     <p v-else class="text-red-700">{{ error || 'Event not found or you do not have access.' }}</p>
   </div>
 </template>
+
+<style scoped>
+/* Reserve the vertical scrollbar gutter so switching between short and long
+   event-management tabs never shifts the header, sidebar or content. */
+:global(html) {
+  scrollbar-gutter: stable;
+}
+</style>
