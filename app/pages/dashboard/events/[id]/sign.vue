@@ -74,7 +74,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <label v-if="savedPosters.length" class="block text-sm">Saved designs<select class="input mt-2" @change="openSavedPoster(savedPosters.find(p=>p.id===($event.target as HTMLSelectElement).value))"><option value="">Choose saved design</option><option v-for="p in savedPosters" :key="p.id" :value="p.id">{{p.name}}</option></select></label>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
-    <p class="text-xs text-[#536273]">Select “Save as PDF” in your browser print dialog to download a printable sign. For best results, enable background graphics and disable browser headers/footers.</p>
+    <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
    </section>
    <div class="ek-sign-stage flex justify-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
     <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4']" aria-label="Printable event welcome sign">
@@ -102,17 +102,15 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 .ek-sign-brand{font-family:Georgia,serif;font-weight:bold;font-size:clamp(16px,2.7vw,28px)}.ek-sign-brand span{color:var(--sign-accent)}.ek-sign-tagline{font-size:clamp(6px,.85vw,10px);letter-spacing:.23em;color:var(--sign-accent)}.ek-sign-ornament{color:var(--sign-accent);font-size:18px}.ek-sign-title{font-family:Georgia,serif;font-size:clamp(22px,4vw,43px);line-height:1.14;overflow-wrap:anywhere}.ek-sign-date{color:var(--sign-accent);font-size:clamp(10px,1.4vw,15px)}.ek-sign-heading{font-family:Georgia,serif;font-size:clamp(15px,2.4vw,26px);line-height:1.15}.ek-sign-message{font-size:clamp(10px,1.3vw,14px);line-height:1.5;overflow-wrap:anywhere}.ek-sign-qr{background:transparent;padding:3%;width:52%;max-width:230px}
 .ek-sign-qr-light{background:rgba(0,0,0,.65);border-radius:8px}
 .ek-sign-qr-dark{background:rgba(255,255,255,.24);border-radius:8px}.ek-sign-qr img{width:100%;display:block}.ek-sign-action{font-size:clamp(10px,1.4vw,15px);font-weight:700}.ek-sign-footer{font-size:clamp(8px,1vw,12px);color:var(--sign-accent)}
-@media print{
- @page{size:A4 portrait;margin:0}
- @page ek-a5-page{size:A5 portrait;margin:0}
- html,body,#__nuxt{margin:0!important;padding:0!important;background:white!important;width:100%!important;min-height:0!important;height:auto!important;overflow:visible!important;scrollbar-gutter:auto!important}
- .ek-no-print,body header,body footer,.ek-sign-stage~*,.ek-sign-stage+.panel{display:none!important}
- main{margin:0!important;padding:0!important;max-width:none!important}
- main>div.grid{display:block!important}
- .ek-sign-stage{padding:0!important;margin:0!important;background:white!important;display:block!important;border-radius:0!important}
- .ek-print-sign{box-sizing:border-box!important;width:210mm!important;height:297mm!important;min-height:0!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;padding:15mm!important;box-shadow:none!important;break-inside:avoid!important;break-after:avoid!important;page-break-after:avoid!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
- .ek-print-sign.ek-paper-a5{page:ek-a5-page;width:148mm!important;height:210mm!important;padding:10mm!important}
- .ek-sign-inner{box-sizing:border-box!important;min-height:0!important}
+@media print {
+ @page { size: A4 portrait; margin: 0; }
+ @page ek-a5-page { size: 148mm 210mm; margin: 0; }
+ html,body,#__nuxt { width:100%!important; margin:0!important; padding:0!important; min-height:0!important; height:auto!important; overflow:visible!important; background:#fff!important; scrollbar-gutter:auto!important; }
+ body * { visibility:hidden!important; }
+ .ek-print-sign, .ek-print-sign * { visibility:visible!important; }
+ .ek-print-sign { position:absolute!important; top:0!important; left:0!important; width:210mm!important; height:297mm!important; box-sizing:border-box!important; margin:0!important; padding:15mm!important; max-width:none!important; min-width:0!important; min-height:0!important; aspect-ratio:auto!important; box-shadow:none!important; overflow:hidden!important; break-inside:avoid!important; page-break-inside:avoid!important; print-color-adjust:exact!important; -webkit-print-color-adjust:exact!important; }
+ .ek-print-sign.ek-paper-a5 { page:ek-a5-page; width:148mm!important; height:210mm!important; padding:10mm!important; }
+ .ek-sign-inner { box-sizing:border-box!important; height:100%!important; min-height:0!important; }
  .ek-sign-brand{font-size:26pt!important}.ek-sign-tagline{font-size:9pt!important}.ek-sign-title{font-size:32pt!important}.ek-sign-date{font-size:12pt!important}.ek-sign-heading{font-size:20pt!important}.ek-sign-message{font-size:12pt!important}.ek-sign-qr{width:55%!important;max-width:65mm!important}.ek-sign-action{font-size:12pt!important}.ek-sign-footer{font-size:10pt!important}
- }
+}
 </style>
