@@ -165,6 +165,16 @@ const selectedWebFonts=computed(()=>[...new Set(typographySections.map(({key})=>
 const fontStylesheetUrl=computed(()=>selectedWebFonts.value.length?'https://fonts.googleapis.com/css2?'+selectedWebFonts.value.map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
 useHead(()=>({link:fontStylesheetUrl.value?[{key:'sign-fonts',rel:'stylesheet',href:fontStylesheetUrl.value}]:[]}))
 
+// Font browser: render each font name in its own typeface, loading lightweight
+// preview glyphs only when the browser is opened.
+const fontBrowserOpen=ref(false)
+const fontSearch=ref('')
+const previewFamilies=fontOptions.filter(f=>f.family).map(f=>f.family as string)
+const previewFontUrl='https://fonts.googleapis.com/css2?'+previewFamilies.map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap&text='+encodeURIComponent('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ')
+useHead(()=>({link:fontBrowserOpen.value?[{key:'sign-font-previews',rel:'stylesheet',href:previewFontUrl}]:[]}))
+const matchingFontGroups=computed(()=>fontsByCategory.value.map(g=>({...g,fonts:g.fonts.filter(f=>f.label.toLowerCase().includes(fontSearch.value.trim().toLowerCase()))})).filter(g=>g.fonts.length))
+const chosenFontName=computed(()=>fontOptions.find(f=>f.value===typography[selectedTypography.value].font)?.label||'Choose a font')
+function chooseFont(value:string){typography[selectedTypography.value].font=value;fontBrowserOpen.value=false}
 const selectedText=computed(()=>typography[selectedTypography.value])
 const textClassMap:Record<TextKey,string>={brand:'brand',tagline:'tagline',event:'title',date:'date',heading:'heading',message:'message',action:'action',footer:'footer'}
 const signTypographyVars=computed(()=>{
@@ -254,14 +264,26 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
        <option v-for="section in typographySections" :key="section.key" :value="section.key">{{section.label}}</option>
       </select>
      </label>
-     <label class="block text-sm font-medium">Font family
-      <select v-model="selectedText.font" class="input mt-1">
-       <optgroup v-for="group in fontsByCategory" :key="group.label" :label="group.label">
-        <option v-for="f in group.fonts" :key="f.value" :value="f.value">{{f.label}}</option>
-       </optgroup>
-      </select>
-      <p class="text-xs text-[#536273]">Over 100 free fonts grouped by occasion. Fonts load when selected; allow a moment before printing.</p>
-     </label>
+     <div class="space-y-2">
+      <label class="block text-sm font-medium">Font family</label>
+      <button type="button" class="input w-full text-left flex items-center justify-between gap-2" :aria-expanded="fontBrowserOpen" @click="fontBrowserOpen=!fontBrowserOpen">
+       <span class="truncate" :style="{fontFamily:selectedText.font}">{{chosenFontName}}</span><span aria-hidden="true">▾</span>
+      </button>
+      <div v-if="fontBrowserOpen" class="rounded-xl border border-[#D6B077] bg-white p-2 shadow-lg">
+       <input v-model="fontSearch" class="input w-full mb-2" placeholder="Search fonts..." aria-label="Search fonts" />
+       <div class="max-h-72 overflow-y-auto space-y-2" role="listbox" aria-label="Font choices">
+        <section v-for="group in matchingFontGroups" :key="group.label">
+         <div class="sticky top-0 bg-[#F8F4EB] px-2 py-1 text-xs font-semibold text-[#536273]">{{group.label}}</div>
+         <button v-for="f in group.fonts" :key="f.value" type="button" role="option" :aria-selected="selectedText.font===f.value"
+          class="block w-full rounded-lg px-3 py-2 text-left hover:bg-[#F8F4EB]"
+          :class="selectedText.font===f.value?'bg-[#F8F4EB] ring-1 ring-[#D6B077]':''"
+          :style="{fontFamily:f.value,fontSize:'19px'}" @click="chooseFont(f.value)">{{f.label}}</button>
+        </section>
+        <p v-if="!matchingFontGroups.length" class="p-3 text-sm text-[#536273]">No matching fonts</p>
+       </div>
+      </div>
+      <p class="text-xs text-[#536273]">Font names are displayed in their own typeface. Previews load when you open the list.</p>
+     </div>
      <label class="block text-sm font-medium">Font size (A4 reference): {{selectedText.size}} px
       <input v-model.number="selectedText.size" type="range" min="6" max="80" step="1" class="w-full mt-2" />
      </label>
