@@ -544,4 +544,4 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 }
 </style>
 
-<style> .ek-decorated-sign{position:relative;isolation:isolate}.ek-decorated-sign>:not(.ek-decoration){position:relative;z-index:2}.ek-decoration{line-height:1.4;letter-spacing:.14em}.ek-print-sign{background:var(--sign-bg)!important} </style>
+<style> .ek-decorated-sign{position:relative;isolation:isolate}.ek-decorated-sign>:not(.ek-decoration){position:relative;z-index:2}.ek-decoration{line-height:1.4;letter-spacing:.14em}.ek-print-sign{background-color:var(--sign-bg)!important} </style>
