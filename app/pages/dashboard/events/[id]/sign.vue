@@ -160,6 +160,22 @@ const typography=reactive<Record<TextKey,TextStyle>>({
  footer:{size:12,color:'#B18A50',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
 })
 const selectedTypography=ref<TextKey>('event')
+const studioTab=ref<'templates'|'text'|'style'|'photo'|'qr'|'saved'>('templates')
+const brandColour=ref('#0C1D2D')
+const brandAccent=ref('#B18A50')
+const templates=[
+ {name:'Classic Elegance',theme:'classic',ink:'#0C1D2D',accent:'#B18A50',font:"'Playfair Display', serif"},
+ {name:'Wedding Romance',theme:'romance',ink:'#513F48',accent:'#B7828C',font:"'Great Vibes', cursive"},
+ {name:'Modern Minimal',theme:'modern',ink:'#19242D',accent:'#516A78',font:"'Montserrat', sans-serif"},
+ {name:'Garden Party',theme:'classic',ink:'#304C3C',accent:'#8FAD79',font:"'Cormorant Garamond', serif"},
+ {name:'Birthday',theme:'modern',ink:'#653E86',accent:'#E88E45',font:"'Fredoka', sans-serif"},
+ {name:'Graduation',theme:'classic',ink:'#172D54',accent:'#B99A49',font:"'Cinzel', serif"},
+ {name:'Baby Shower',theme:'romance',ink:'#6E8296',accent:'#D7A4A6',font:"'Quicksand', sans-serif"},
+ {name:'Retro Celebration',theme:'modern',ink:'#623F32',accent:'#C47A43',font:"'Berkshire Swash', serif"}
+]
+function applyTemplate(t:typeof templates[number]){theme.value=t.theme as 'classic'|'romance'|'modern';brandColour.value=t.ink;brandAccent.value=t.accent;typography.event.font=t.font;typography.heading.font=t.font;studioTab.value='text'}
+function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='text';fontBrowserOpen.value=false}
+
 // Load only fonts currently used on the poster, avoiding a large upfront download.
 const selectedWebFonts=computed(()=>[...new Set(typographySections.map(({key})=>typography[key]).map(t=>fontOptions.find(f=>f.value===t.font)?.family).filter((f):f is string=>!!f))])
 const fontStylesheetUrl=computed(()=>selectedWebFonts.value.length?'https://fonts.googleapis.com/css2?'+selectedWebFonts.value.map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
@@ -216,8 +232,8 @@ const coverUrl=ref<string|null>(null),posterCover=ref<string|null>(null),useCove
 const posterName=ref('Welcome poster'),savedPosters=ref<any[]>([]),posterBusy=ref(false),posterError=ref('')
 async function posterAuth(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in again');return {authorization:`Bearer ${session.access_token}`}}
 async function loadPosterAssets(){try{const headers=await posterAuth();const [branding,posters]=await Promise.all([$fetch<any>('/api/owner/branding',{query:{id:String(route.params.id)},headers}),$fetch<any>('/api/owner/posters',{query:{id:String(route.params.id)},headers})]);coverUrl.value=branding.cover_url;savedPosters.value=posters.designs}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}}
-async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
-function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
+async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,brandColour:brandColour.value,brandAccent:brandAccent.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
 const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
 
@@ -251,9 +267,20 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
   <p v-if="loading">Loading sign designer…</p><p v-else-if="error" class="text-red-700">{{error}}</p>
   <div v-else-if="item" class="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
    <section class="panel space-y-5 ek-no-print self-start">
-    <h2 class="text-xl font-semibold">Customise your sign</h2>
-    <label class="block text-sm font-medium">Style<select v-model="theme" class="input mt-2"><option value="classic">Classic navy & gold</option><option value="romance">Wedding ivory & rose</option><option value="modern">Modern minimal</option></select></label>
-    <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
+    <nav class="grid grid-cols-3 gap-2" aria-label="Sign designer tools">
+     <button v-for="tab in [{id:'templates',name:'Templates'},{id:'text',name:'Text'},{id:'style',name:'Style'},{id:'photo',name:'Photo'},{id:'qr',name:'QR Code'},{id:'saved',name:'Saved'}]" :key="tab.id" type="button" class="rounded-lg border px-2 py-3 text-sm font-medium" :class="studioTab===tab.id?'bg-[#0C1D2D] text-white':'bg-white text-[#0C1D2D] border-[#D6B077]'" @click="studioTab=tab.id">{{tab.name}}</button>
+    </nav>
+    <div v-if="studioTab==='templates'" class="space-y-3"><h2 class="text-lg font-semibold">Choose a starting design</h2><p class="text-sm">Choose a template, then click the sign text to format it.</p>
+     <div class="grid grid-cols-2 gap-2"><button v-for="t in templates" :key="t.name" type="button" class="rounded-xl border border-[#D6B077] p-2 text-left" @click="applyTemplate(t)"><div class="h-20 rounded-md flex items-center justify-center" :style="{background:t.accent,border:'5px solid '+t.ink,color:t.ink}"><span :style="{fontFamily:t.font}">Welcome</span></div><span class="text-xs font-semibold">{{t.name}}</span></button></div>
+    </div>
+    <div v-if="studioTab==='style'" class="space-y-4"><h2 class="text-lg font-semibold">Customise Style</h2><p class="text-sm text-[#536273]">The EventKeepsakes title and Capture · Share · Remember keep their original wording, font and sizing. Only branding colours can change.</p>
+     <label class="block text-sm font-medium">Branding title colour<div class="flex items-center gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12" /><input v-model="brandColour" class="input flex-1" maxlength="7" aria-label="Brand title hex colour" /></div></label>
+     <label class="block text-sm font-medium">Branding accent and tagline colour<div class="flex items-center gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12" /><input v-model="brandAccent" class="input flex-1" maxlength="7" aria-label="Brand accent hex colour" /></div></label>
+     <button type="button" class="rounded-lg border px-3 py-2 text-sm" @click="brandColour='#0C1D2D';brandAccent='#B18A50'">Reset branding colours</button>
+     <label class="block text-sm font-medium">Background style<select v-model="theme" class="input mt-2"><option value="classic">Classic</option><option value="romance">Romance</option><option value="modern">Modern</option></select></label>
+     <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
+    </div>
+    <div v-if="studioTab==='text'" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
     <label class="block text-sm font-medium">Message<textarea v-model="message" maxlength="260" rows="4" class="input mt-2" /></label>
 
@@ -298,6 +325,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      </div>
      <p class="text-xs text-[#536273]">Each element has independent styling. A5 automatically scales font sizes down. Your choices are saved with the poster.</p>
     </div>
+    </div><div v-if="studioTab==='qr'" class="space-y-4"><h2 class="text-lg font-semibold">QR code</h2>
     <label class="block text-sm font-medium">QR code colour
      <select v-model="qrColourMode" class="input mt-2">
       <option value="auto">Automatic (matches sign background)</option>
@@ -306,6 +334,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      </select>
     </label>
     <p class="text-xs text-[#536273]">The QR image has a transparent background. White QR uses a subtle dark contrast panel for reliable scanning.</p>
+    </div><div v-if="studioTab==='photo'" class="space-y-4"><h2 class="text-lg font-semibold">Photo & layout</h2>
     <label class="flex items-center gap-2 text-sm"><input v-model="showDate" type="checkbox" /> Show event date</label>
     <label class="flex items-center gap-2 text-sm"><input v-model="useCover" type="checkbox" /> Use event cover photo in poster</label>
     <div v-if="useCover" class="space-y-1">
@@ -316,28 +345,31 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
       <p class="text-xs text-[#536273]">0% shows the photo at full strength; increase the fade if the text becomes hard to read. Default: 28%.</p>
     </div>
     <p class="text-xs text-[#536273]">A saved poster keeps its own cover snapshot even if you later replace the event cover.</p>
+    </div><div v-if="studioTab==='saved'" class="space-y-4"><h2 class="text-lg font-semibold">Save & load designs</h2>
     <label class="block text-sm">Design name<input v-model="posterName" maxlength="80" class="input mt-2" /></label>
     <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
     <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
     <label v-if="savedPosters.length" class="block text-sm">Saved designs<select class="input mt-2" @change="openSavedPoster(savedPosters.find(p=>p.id===($event.target as HTMLSelectElement).value))"><option value="">Choose saved design</option><option v-for="p in savedPosters" :key="p.id" :value="p.id">{{p.name}}</option></select></label>
+    </div>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
    </section>
    <div class="ek-sign-stage flex flex-col items-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
     <p class="mb-3 text-center text-xs font-semibold text-[#536273]">{{paper}} portrait preview · {{paper==='A4'?'210 × 297 mm':'148 × 210 mm'}} · scaled to fit screen</p>
-    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
+    <p class="ek-no-print mb-2 text-xs text-[#536273]">Click editable text on the sign to open its font controls.</p>
+    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,'--ek-brand-colour':/^#[0-9a-f]{6}$/i.test(brandColour)?brandColour:'#0C1D2D','--ek-brand-accent':/^#[0-9a-f]{6}$/i.test(brandAccent)?brandAccent:'#B18A50',...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
       <div class="ek-sign-inner" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
        <div class="ek-sign-tagline">CAPTURE · SHARE · REMEMBER</div>
        <div class="ek-sign-ornament">✦ &nbsp; ✦ &nbsp; ✦</div>
-       <h2 class="ek-sign-title">{{item.title}}</h2>
-       <p v-if="showDate&&dateLabel" class="ek-sign-date">{{dateLabel}}</p>
-       <h3 class="ek-sign-heading">{{heading}}</h3>
-       <p class="ek-sign-message" style="white-space:pre-line;overflow-wrap:anywhere">{{message}}</p>
+       <h2 class="ek-sign-title ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('event')" @keydown.enter="editOnCanvas('event')">{{item.title}}</h2>
+       <p class="ek-sign-date ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('date')" @keydown.enter="editOnCanvas('date')">{{dateLabel}}</p>
+       <h3 class="ek-sign-heading ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('heading')" @keydown.enter="editOnCanvas('heading')">{{heading}}</h3>
+       <p class="ek-sign-message ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('message')" @keydown.enter="editOnCanvas('message')" style="white-space:pre-line;overflow-wrap:anywhere">{{message}}</p>
        <div class="ek-sign-qr" :class="qrInk==='#FFFFFF'?'ek-sign-qr-light':'ek-sign-qr-dark'"><img :src="qr"  alt="QR code linking to event guest upload page" /></div>
-       <p class="ek-sign-action">Point your phone camera here</p>
-       <p class="ek-sign-footer">No app or account required</p>
+       <p class="ek-sign-action ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('action')" @keydown.enter="editOnCanvas('action')">Point your phone camera here</p>
+       <p class="ek-sign-footer ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('footer')" @keydown.enter="editOnCanvas('footer')">No app or account required</p>
       </div>
     </article>
    </div>
@@ -419,4 +451,10 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 .ek-print-sign .ek-sign-action{font-size:var(--ek-action-print-size)!important}
 .ek-print-sign .ek-sign-footer{font-size:var(--ek-footer-print-size)!important}
 }
+</style>
+
+<style>
+@media screen{.ek-editable{cursor:pointer;outline-offset:3px}.ek-editable:hover,.ek-editable:focus-visible{outline:2px dashed #B18A50}}
+.ek-sign-brand{color:var(--ek-brand-colour,#0C1D2D)!important}
+.ek-sign-brand span,.ek-sign-tagline{color:var(--ek-brand-accent,#B18A50)!important}
 </style>
