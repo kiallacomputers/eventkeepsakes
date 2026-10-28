@@ -190,7 +190,7 @@ function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value=
 type DecorationKind='none'|'floral'|'confetti'|'stars'|'ribbon'|'clouds'|'cross'|'geometric'|'leaves'|'hearts'
 
 // Phase 2: individually editable overlay layers, stored in poster-relative percentages.
-type OverlayLayer={id:string;kind:Exclude<DecorationKind,'none'>;x:number;y:number;size:number;rotation:number;opacity:number;colour:string;flip:boolean}
+type OverlayLayer={id:string;kind:Exclude<DecorationKind,'none'>;x:number;y:number;size:number;rotation:number;opacity:number;colour:string;flip:boolean;asset?:string}
 const layers=ref<OverlayLayer[]>([])
 const selectedLayerId=ref<string|null>(null)
 const selectedLayer=computed(()=>layers.value.find(l=>l.id===selectedLayerId.value)||null)
@@ -202,6 +202,39 @@ const categoryDecorations:Record<string,DecorationKind[]>={
  baby:['clouds','stars','hearts','ribbon'],graduation:['stars','geometric','ribbon'],
  corporate:['geometric','stars','ribbon'],anniversary:['hearts','floral','ribbon'],
  memorial:['leaves','floral','clouds'],other:['floral','confetti','stars','ribbon','clouds','cross','geometric','leaves','hearts']}
+const artworkLibrary=[
+ {id:'blush-floral',name:'Blush floral corner',categories:['wedding','anniversary','christening','memorial']},
+ {id:'garden-bouquet',name:'Garden bouquet',categories:['wedding','celebration','baby','memorial']},
+ {id:'eucalyptus',name:'Eucalyptus greenery',categories:['wedding','christening','memorial','corporate']},
+ {id:'gold-frame',name:'Classic gold frame',categories:['wedding','celebration','anniversary','graduation','corporate']},
+ {id:'art-deco',name:'Art deco border',categories:['celebration','anniversary','corporate','graduation']},
+ {id:'party-confetti',name:'Party confetti',categories:['birthday','celebration','graduation']},
+ {id:'balloons',name:'Watercolour balloons',categories:['birthday','baby','celebration']},
+ {id:'ribbon',name:'Silk ribbon',categories:['wedding','birthday','baby','celebration']},
+ {id:'dove',name:'Watercolour dove',categories:['christening','memorial']},
+ {id:'christening-cross',name:'Floral cross',categories:['christening']},
+ {id:'clouds',name:'Soft watercolour clouds',categories:['baby','christening']},
+ {id:'star-sparkle',name:'Gold sparkles',categories:['wedding','birthday','celebration','graduation']},
+ {id:'heart-wreath',name:'Floral heart wreath',categories:['wedding','anniversary','baby']},
+ {id:'laurel',name:'Botanical laurel',categories:['wedding','graduation','corporate','memorial']}
+]
+const artworkSearch=ref('')
+const artworkCategoryOnly=ref(true)
+const filteredArtwork=computed(()=>artworkLibrary.filter(a=>(!artworkCategoryOnly.value||a.categories.includes(categoryId.value))&&a.name.toLowerCase().includes(artworkSearch.value.toLowerCase())))
+const artworkUrl=(id:string)=>`/sign-artwork/${id}.svg`
+function addArtwork(id:string){
+ if(layers.value.length>=20)return
+ const kind:OverlayLayer['kind']='floral'
+ const lid=`art-${Date.now()}-${Math.random().toString(36).slice(2,7)}`
+ layers.value.push({id:lid,kind,asset:id,x:50,y:50,size:id.includes('frame')||id.includes('deco')?85:34,rotation:0,opacity:100,colour:brandAccent.value,flip:false})
+ selectedLayerId.value=lid
+}
+function addMatchingCorners(){
+ if(layers.value.length>18)return
+ const id=categoryId.value==='birthday'?'balloons':categoryId.value==='christening'?'christening-cross':categoryId.value==='celebration'?'star-sparkle':'blush-floral'
+ addArtwork(id);const first=layers.value[layers.value.length-1];first.x=19;first.y=16
+ addArtwork(id);const second=layers.value[layers.value.length-1];second.x=81;second.y=84;second.rotation=180
+}
 const availableDecorations=computed(()=>categoryDecorations[categoryId.value]||categoryDecorations.other)
 function addLayer(kind:DecorationKind){
  if(kind==='none'||layers.value.length>=20)return
@@ -225,7 +258,7 @@ function beginLayerDrag(event:PointerEvent,l:OverlayLayer){
 }
 function dragLayer(event:PointerEvent,l:OverlayLayer){if(!dragging.value||!dragStart||selectedLayerId.value!==l.id)return;l.x=Math.max(2,Math.min(98,dragStart.left+(event.clientX-dragStart.x)/dragStart.width*100));l.y=Math.max(2,Math.min(98,dragStart.top+(event.clientY-dragStart.y)/dragStart.height*100))}
 function stopLayerDrag(){dragging.value=false;dragStart=null}
-function restoreLayers(raw:any){layers.value=Array.isArray(raw)?raw.slice(0,20).filter(l=>l&&typeof l==='object'&&['floral','confetti','stars','ribbon','clouds','cross','geometric','leaves','hearts'].includes(l.kind)).map((l,i)=>({id:`saved-${i}`,kind:l.kind,x:Math.max(2,Math.min(98,Number(l.x)||50)),y:Math.max(2,Math.min(98,Number(l.y)||50)),size:Math.max(5,Math.min(90,Number(l.size)||25)),rotation:Math.max(-180,Math.min(180,Number(l.rotation)||0)),opacity:Math.max(0,Math.min(100,Number(l.opacity)??65)),colour:/^#[0-9a-f]{6}$/i.test(l.colour)?l.colour:'#B18A50',flip:!!l.flip})):[];selectedLayerId.value=null}
+function restoreLayers(raw:any){layers.value=Array.isArray(raw)?raw.slice(0,20).filter(l=>l&&typeof l==='object'&&['floral','confetti','stars','ribbon','clouds','cross','geometric','leaves','hearts'].includes(l.kind)).map((l,i)=>({id:`saved-${i}`,kind:l.kind,x:Math.max(2,Math.min(98,Number(l.x)||50)),y:Math.max(2,Math.min(98,Number(l.y)||50)),size:Math.max(5,Math.min(90,Number(l.size)||25)),rotation:Math.max(-180,Math.min(180,Number(l.rotation)||0)),opacity:Math.max(0,Math.min(100,Number(l.opacity)??65)),colour:/^#[0-9a-f]{6}$/i.test(l.colour)?l.colour:'#B18A50',flip:!!l.flip,asset:typeof l.asset==='string'&&artworkLibrary.some(a=>a.id===l.asset)?l.asset:undefined})):[];selectedLayerId.value=null}
 const decoration=ref<DecorationKind>('none')
 const decorationOpacity=ref(65)
 const decorationSize=ref(85)
@@ -355,22 +388,25 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
     </div>
     <div v-if="studioTab==='style'" class="space-y-4">
-     <h3 class="font-semibold">Overlay library</h3>
-     <p class="text-xs text-[#536273]">Add multiple decorations. Drag them directly on the poster to position them. Tap one to adjust it.</p>
-     <div class="grid grid-cols-3 gap-2">
-      <button v-for="kind in availableDecorations" :key="kind" type="button" class="rounded-lg border border-[#D6B077] p-2 text-center hover:bg-[#F4E9D8]" @click="addLayer(kind)">
-       <span class="block text-2xl mb-1" :style="{color:brandAccent}">{{decorationSymbols[kind]}}</span>
-       <span class="text-xs capitalize">{{kind}}</span>
+     <h3 class="font-semibold">Professional artwork</h3>
+     <p class="text-xs text-[#536273]">Original transparent illustrations. Add artwork, then drag it around the sign. Use a matching pair for coordinated corners.</p>
+     <button type="button" class="w-full rounded-lg border border-[#D6B077] px-3 py-2 text-sm font-semibold" @click="addMatchingCorners">Add matching corner pair</button>
+     <input v-model="artworkSearch" class="input w-full" placeholder="Search flowers, balloons, frames..." aria-label="Search artwork"/>
+     <label class="flex items-center gap-2 text-xs"><input v-model="artworkCategoryOnly" type="checkbox"/> Show artwork for this event category</label>
+     <div class="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+      <button v-for="art in filteredArtwork" :key="art.id" type="button" class="rounded-lg border border-[#D6B077] bg-white p-2 text-center hover:bg-[#F4E9D8]" @click="addArtwork(art.id)">
+       <img :src="artworkUrl(art.id)" :alt="art.name" loading="lazy" class="w-full h-24 object-contain"/>
+       <span class="text-xs">{{art.name}}</span>
       </button>
      </div>
      <p v-if="layers.length>=20" class="text-xs text-amber-800">Maximum 20 overlays per sign.</p>
      <div v-if="layers.length" class="space-y-2">
       <h4 class="font-semibold">Layers ({{layers.length}})</h4>
-      <button v-for="(layer,i) in [...layers].reverse()" :key="layer.id" type="button" class="block w-full rounded-lg border px-3 py-2 text-left text-sm capitalize" :class="selectedLayerId===layer.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077]'" @click="selectedLayerId=layer.id">{{layers.length-i}} · {{layer.kind}}</button>
+      <button v-for="(layer,i) in [...layers].reverse()" :key="layer.id" type="button" class="block w-full rounded-lg border px-3 py-2 text-left text-sm capitalize" :class="selectedLayerId===layer.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077]'" @click="selectedLayerId=layer.id">{{layers.length-i}} · {{layer.asset?artworkLibrary.find(a=>a.id===layer.asset)?.name:layer.kind}}</button>
      </div>
      <div v-if="selectedLayer" class="space-y-3 rounded-xl border border-[#D6B077] p-3">
-      <h4 class="font-semibold capitalize">Selected: {{selectedLayer.kind}}</h4>
-      <label class="block text-sm">Colour <input v-model="selectedLayer.colour" type="color" class="ml-2 h-9 w-12 align-middle"/></label>
+      <h4 class="font-semibold capitalize">Selected: {{selectedLayer.asset?artworkLibrary.find(a=>a.id===selectedLayer.asset)?.name:selectedLayer.kind}}</h4>
+      <p v-if="selectedLayer.asset" class="text-xs text-[#536273]">Illustration colours are part of the artwork; use opacity, size, rotation and flip to customise.</p><label v-else class="block text-sm">Colour <input v-model="selectedLayer.colour" type="color" class="ml-2 h-9 w-12 align-middle"/></label>
       <label class="block text-sm">Opacity {{selectedLayer.opacity}}%<input v-model.number="selectedLayer.opacity" type="range" min="0" max="100" class="w-full"/></label>
       <label class="block text-sm">Size {{selectedLayer.size}}%<input v-model.number="selectedLayer.size" type="range" min="5" max="90" class="w-full"/></label>
       <label class="block text-sm">Rotation {{selectedLayer.rotation}}°<input v-model.number="selectedLayer.rotation" type="range" min="-180" max="180" class="w-full"/></label>
@@ -466,7 +502,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
       <div class="ek-sign-inner ek-decorated-sign" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div v-if="decoration!=='none'" class="ek-decoration" :style="decorationPositionStyle" aria-hidden="true">{{decorationSymbols[decoration]}}</div>
        <div class="ek-overlay-stage" aria-label="Decorative overlays">
-        <div v-for="layer in layers" :key="layer.id" class="ek-overlay-layer" :class="{'ek-overlay-selected':selectedLayerId===layer.id}" :style="layerStyle(layer)" role="button" tabindex="0" :aria-label="`Select ${layer.kind} decoration`" @pointerdown="beginLayerDrag($event,layer)" @pointermove="dragLayer($event,layer)" @pointerup="stopLayerDrag" @pointercancel="stopLayerDrag" @keydown.enter="selectedLayerId=layer.id;studioTab='style'">{{decorationSymbols[layer.kind]}}</div>
+        <div v-for="layer in layers" :key="layer.id" class="ek-overlay-layer" :class="{'ek-overlay-selected':selectedLayerId===layer.id}" :style="layerStyle(layer)" role="button" tabindex="0" :aria-label="`Select ${layer.kind} decoration`" @pointerdown="beginLayerDrag($event,layer)" @pointermove="dragLayer($event,layer)" @pointerup="stopLayerDrag" @pointercancel="stopLayerDrag" @keydown.enter="selectedLayerId=layer.id;studioTab='style'"><img v-if="layer.asset" :src="artworkUrl(layer.asset)" alt="" draggable="false" class="ek-artwork-image"/><span v-else>{{decorationSymbols[layer.kind]}}</span></div>
        </div>
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
        <div class="ek-sign-tagline">Capture · Share · Remember</div>
@@ -613,3 +649,4 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 @media screen{.ek-overlay-selected{outline:2px dashed currentColor;outline-offset:3px}}
 @media print{.ek-overlay-layer{cursor:default!important;outline:none!important}}
 </style>
+\n<style>.ek-artwork-image{display:block;width:100%;height:auto;max-height:100%;object-fit:contain;pointer-events:none;user-select:none}.ek-overlay-layer:has(.ek-artwork-image){aspect-ratio:1/1}.ek-overlay-stage{overflow:visible!important}</style>\n
