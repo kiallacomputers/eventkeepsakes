@@ -222,7 +222,7 @@ function restoreTypography(raw:any){
 }
 
 const heading=ref('Scan & Share Your Memories')
-const message=ref('Help us capture every special moment! Scan the QR code to share your photos and videos.')
+const message=ref('Help us capture every special moment!\n\nScan the QR code to share your photos and videos.')
 const paper=ref<'A4'|'A5'>('A4')
 const photoFill=ref(false)
 const photoOverlay=ref(28) // White overlay percentage: lower means a stronger, more vivid photo
