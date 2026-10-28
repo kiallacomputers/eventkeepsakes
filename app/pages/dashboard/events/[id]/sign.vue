@@ -650,3 +650,14 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 @media print{.ek-overlay-layer{cursor:default!important;outline:none!important}}
 </style>
 \n<style>.ek-artwork-image{display:block;width:100%;height:auto;max-height:100%;object-fit:contain;pointer-events:none;user-select:none}.ek-overlay-layer:has(.ek-artwork-image){aspect-ratio:1/1}.ek-overlay-stage{overflow:visible!important}</style>\n
+<style>
+/* Artwork stays above the background but below all sign text, branding and QR.
+   Isolate stacking so the editor's controls and print layout remain unaffected. */
+.ek-sign-inner.ek-decorated-sign { position: relative; isolation: isolate; }
+.ek-sign-inner.ek-decorated-sign > .ek-overlay-stage { z-index: 1 !important; }
+.ek-sign-inner.ek-decorated-sign > :not(.ek-overlay-stage) { position: relative; z-index: 2; }
+@media print {
+ .ek-sign-inner.ek-decorated-sign > .ek-overlay-stage { z-index: 1 !important; }
+ .ek-sign-inner.ek-decorated-sign > :not(.ek-overlay-stage) { z-index: 2 !important; }
+}
+</style>
