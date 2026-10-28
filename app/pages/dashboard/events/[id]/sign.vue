@@ -188,6 +188,44 @@ function nextStudioStep(){const i=studioSteps.findIndex(x=>x.id===studioTab.valu
 function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='style';fontBrowserOpen.value=false}
 // Decoration assets are CSS/SVG primitives rather than third-party image files.
 type DecorationKind='none'|'floral'|'confetti'|'stars'|'ribbon'|'clouds'|'cross'|'geometric'|'leaves'|'hearts'
+
+// Phase 2: individually editable overlay layers, stored in poster-relative percentages.
+type OverlayLayer={id:string;kind:Exclude<DecorationKind,'none'>;x:number;y:number;size:number;rotation:number;opacity:number;colour:string;flip:boolean}
+const layers=ref<OverlayLayer[]>([])
+const selectedLayerId=ref<string|null>(null)
+const selectedLayer=computed(()=>layers.value.find(l=>l.id===selectedLayerId.value)||null)
+const dragging=ref(false)
+let dragStart:{x:number;y:number;left:number;top:number;width:number;height:number}|null=null
+const categoryDecorations:Record<string,DecorationKind[]>={
+ wedding:['floral','leaves','hearts','ribbon','stars'],birthday:['confetti','stars','ribbon','hearts'],
+ celebration:['stars','confetti','geometric','ribbon'],christening:['cross','clouds','floral','stars'],
+ baby:['clouds','stars','hearts','ribbon'],graduation:['stars','geometric','ribbon'],
+ corporate:['geometric','stars','ribbon'],anniversary:['hearts','floral','ribbon'],
+ memorial:['leaves','floral','clouds'],other:['floral','confetti','stars','ribbon','clouds','cross','geometric','leaves','hearts']}
+const availableDecorations=computed(()=>categoryDecorations[categoryId.value]||categoryDecorations.other)
+function addLayer(kind:DecorationKind){
+ if(kind==='none'||layers.value.length>=20)return
+ const id=`layer-${Date.now()}-${Math.random().toString(36).slice(2,7)}`
+ layers.value.push({id,kind,x:50,y:50,size:25,rotation:0,opacity:65,colour:brandAccent.value,flip:false})
+ selectedLayerId.value=id
+}
+function removeLayer(id:string){layers.value=layers.value.filter(l=>l.id!==id);if(selectedLayerId.value===id)selectedLayerId.value=null}
+function duplicateLayer(){const l=selectedLayer.value;if(!l||layers.value.length>=20)return;const id=`layer-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;layers.value.push({...l,id,x:Math.min(90,l.x+7),y:Math.min(90,l.y+7)});selectedLayerId.value=id}
+function moveLayer(id:string,dir:number){const index=layers.value.findIndex(l=>l.id===id);const next=index+dir;if(index<0||next<0||next>=layers.value.length)return;const copy=[...layers.value];[copy[index],copy[next]]=[copy[next],copy[index]];layers.value=copy}
+function layerStyle(l:OverlayLayer){return {left:`${l.x}%`,top:`${l.y}%`,width:`${l.size}%`,transform:`translate(-50%,-50%) rotate(${l.rotation}deg) scaleX(${l.flip?-1:1})`,opacity:l.opacity/100,color:l.colour,zIndex:3+layers.value.indexOf(l)}}
+function beginLayerDrag(event:PointerEvent,l:OverlayLayer){
+ if(event.button!==0)return
+ const stage=(event.currentTarget as HTMLElement).parentElement
+ if(!stage)return
+ const rect=stage.getBoundingClientRect()
+ selectedLayerId.value=l.id;studioTab.value='style';dragging.value=true
+ dragStart={x:event.clientX,y:event.clientY,left:l.x,top:l.y,width:rect.width,height:rect.height}
+ ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+ event.preventDefault()
+}
+function dragLayer(event:PointerEvent,l:OverlayLayer){if(!dragging.value||!dragStart||selectedLayerId.value!==l.id)return;l.x=Math.max(2,Math.min(98,dragStart.left+(event.clientX-dragStart.x)/dragStart.width*100));l.y=Math.max(2,Math.min(98,dragStart.top+(event.clientY-dragStart.y)/dragStart.height*100))}
+function stopLayerDrag(){dragging.value=false;dragStart=null}
+function restoreLayers(raw:any){layers.value=Array.isArray(raw)?raw.slice(0,20).filter(l=>l&&typeof l==='object'&&['floral','confetti','stars','ribbon','clouds','cross','geometric','leaves','hearts'].includes(l.kind)).map((l,i)=>({id:`saved-${i}`,kind:l.kind,x:Math.max(2,Math.min(98,Number(l.x)||50)),y:Math.max(2,Math.min(98,Number(l.y)||50)),size:Math.max(5,Math.min(90,Number(l.size)||25)),rotation:Math.max(-180,Math.min(180,Number(l.rotation)||0)),opacity:Math.max(0,Math.min(100,Number(l.opacity)??65)),colour:/^#[0-9a-f]{6}$/i.test(l.colour)?l.colour:'#B18A50',flip:!!l.flip})):[];selectedLayerId.value=null}
 const decoration=ref<DecorationKind>('none')
 const decorationOpacity=ref(65)
 const decorationSize=ref(85)
@@ -262,8 +300,8 @@ const coverUrl=ref<string|null>(null),posterCover=ref<string|null>(null),useCove
 const posterName=ref('Welcome poster'),savedPosters=ref<any[]>([]),posterBusy=ref(false),posterError=ref('')
 async function posterAuth(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in again');return {authorization:`Bearer ${session.access_token}`}}
 async function loadPosterAssets(){try{const headers=await posterAuth();const [branding,posters]=await Promise.all([$fetch<any>('/api/owner/branding',{query:{id:String(route.params.id)},headers}),$fetch<any>('/api/owner/posters',{query:{id:String(route.params.id)},headers})]);coverUrl.value=branding.cover_url;savedPosters.value=posters.designs}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}}
-async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
-function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);categoryId.value=categories.some(x=>x.id===c.categoryId)?c.categoryId:'wedding';paletteIndex.value=[0,1,2].includes(c.paletteIndex)?c.paletteIndex:0;paletteBackground.value=/^#[0-9a-f]{6}$/i.test(c.paletteBackground||'')?c.paletteBackground:'#FFF9ED';decoration.value=decorationNames.some(x=>x[0]===c.decoration)?c.decoration:'none';decorationOpacity.value=Math.min(100,Math.max(0,Number(c.decorationOpacity)||65));decorationSize.value=Math.min(160,Math.max(20,Number(c.decorationSize)||85));decorationRotation.value=Math.min(180,Math.max(-180,Number(c.decorationRotation)||0));decorationPosition.value=['top-left','top-right','bottom-left','bottom-right'].includes(c.decorationPosition)?c.decorationPosition:'top-left';decorationColour.value=/^#[0-9a-f]{6}$/i.test(c.decorationColour||'')?c.decorationColour:'#B18A50';brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
+async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,layers:layers.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+function openSavedPoster(p:any){const c=p.config||{};restoreLayers(c.layers);paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);categoryId.value=categories.some(x=>x.id===c.categoryId)?c.categoryId:'wedding';paletteIndex.value=[0,1,2].includes(c.paletteIndex)?c.paletteIndex:0;paletteBackground.value=/^#[0-9a-f]{6}$/i.test(c.paletteBackground||'')?c.paletteBackground:'#FFF9ED';decoration.value=decorationNames.some(x=>x[0]===c.decoration)?c.decoration:'none';decorationOpacity.value=Math.min(100,Math.max(0,Number(c.decorationOpacity)||65));decorationSize.value=Math.min(160,Math.max(20,Number(c.decorationSize)||85));decorationRotation.value=Math.min(180,Math.max(-180,Number(c.decorationRotation)||0));decorationPosition.value=['top-left','top-right','bottom-left','bottom-right'].includes(c.decorationPosition)?c.decorationPosition:'top-left';decorationColour.value=/^#[0-9a-f]{6}$/i.test(c.decorationColour||'')?c.decorationColour:'#B18A50';brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
 const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
 
@@ -316,15 +354,34 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      <label class="block text-sm font-medium">Background style<select v-model="theme" class="input mt-2"><option value="classic">Classic</option><option value="romance">Romance</option><option value="modern">Modern</option></select></label>
      <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
     </div>
-    <div v-if="studioTab==='style'" class="space-y-4"><h3 class="font-semibold">Decorative overlays</h3><p class="text-xs text-[#536273]">Decorations print with the sign. Branding always stays legible and locked.</p>
-     <div class="grid grid-cols-2 gap-2"><button v-for="[id,name] in decorationNames" :key="id" type="button" class="rounded-lg border px-2 py-3 text-sm" :class="decoration===id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077]'" @click="decoration=id">{{name}}</button></div>
-     <template v-if="decoration!=='none'">
-      <label class="block text-sm">Overlay colour <input v-model="decorationColour" type="color" class="ml-2 h-9 w-12 align-middle"/></label>
-      <label class="block text-sm">Opacity: {{decorationOpacity}}%<input v-model.number="decorationOpacity" type="range" min="0" max="100" class="w-full"/></label>
-      <label class="block text-sm">Size: {{decorationSize}}%<input v-model.number="decorationSize" type="range" min="20" max="160" class="w-full"/></label>
-      <label class="block text-sm">Rotation: {{decorationRotation}}°<input v-model.number="decorationRotation" type="range" min="-180" max="180" class="w-full"/></label>
-      <label class="block text-sm">Position<select v-model="decorationPosition" class="input mt-1"><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option><option value="bottom-right">Bottom right</option></select></label>
-     </template>
+    <div v-if="studioTab==='style'" class="space-y-4">
+     <h3 class="font-semibold">Overlay library</h3>
+     <p class="text-xs text-[#536273]">Add multiple decorations. Drag them directly on the poster to position them. Tap one to adjust it.</p>
+     <div class="grid grid-cols-3 gap-2">
+      <button v-for="kind in availableDecorations" :key="kind" type="button" class="rounded-lg border border-[#D6B077] p-2 text-center hover:bg-[#F4E9D8]" @click="addLayer(kind)">
+       <span class="block text-2xl mb-1" :style="{color:brandAccent}">{{decorationSymbols[kind]}}</span>
+       <span class="text-xs capitalize">{{kind}}</span>
+      </button>
+     </div>
+     <p v-if="layers.length>=20" class="text-xs text-amber-800">Maximum 20 overlays per sign.</p>
+     <div v-if="layers.length" class="space-y-2">
+      <h4 class="font-semibold">Layers ({{layers.length}})</h4>
+      <button v-for="(layer,i) in [...layers].reverse()" :key="layer.id" type="button" class="block w-full rounded-lg border px-3 py-2 text-left text-sm capitalize" :class="selectedLayerId===layer.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077]'" @click="selectedLayerId=layer.id">{{layers.length-i}} · {{layer.kind}}</button>
+     </div>
+     <div v-if="selectedLayer" class="space-y-3 rounded-xl border border-[#D6B077] p-3">
+      <h4 class="font-semibold capitalize">Selected: {{selectedLayer.kind}}</h4>
+      <label class="block text-sm">Colour <input v-model="selectedLayer.colour" type="color" class="ml-2 h-9 w-12 align-middle"/></label>
+      <label class="block text-sm">Opacity {{selectedLayer.opacity}}%<input v-model.number="selectedLayer.opacity" type="range" min="0" max="100" class="w-full"/></label>
+      <label class="block text-sm">Size {{selectedLayer.size}}%<input v-model.number="selectedLayer.size" type="range" min="5" max="90" class="w-full"/></label>
+      <label class="block text-sm">Rotation {{selectedLayer.rotation}}°<input v-model.number="selectedLayer.rotation" type="range" min="-180" max="180" class="w-full"/></label>
+      <div class="grid grid-cols-2 gap-2">
+       <button type="button" class="rounded-lg border p-2 text-sm" @click="selectedLayer.flip=!selectedLayer.flip">Flip horizontally</button>
+       <button type="button" class="rounded-lg border p-2 text-sm" @click="duplicateLayer">Duplicate</button>
+       <button type="button" class="rounded-lg border p-2 text-sm" @click="moveLayer(selectedLayer.id,1)">Bring forward</button>
+       <button type="button" class="rounded-lg border p-2 text-sm" @click="moveLayer(selectedLayer.id,-1)">Send backward</button>
+       <button type="button" class="col-span-2 rounded-lg border border-red-300 p-2 text-sm text-red-800" @click="removeLayer(selectedLayer.id)">Remove overlay</button>
+      </div>
+     </div>
     </div>
     <div v-if="studioTab==='text'" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
@@ -408,6 +465,9 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,'--ek-brand-colour':/^#[0-9a-f]{6}$/i.test(brandColour)?brandColour:'#0C1D2D','--ek-brand-accent':/^#[0-9a-f]{6}$/i.test(brandAccent)?brandAccent:'#B18A50','--sign-bg':/^#[0-9a-f]{6}$/i.test(paletteBackground)?paletteBackground:'#FFF9ED',...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
       <div class="ek-sign-inner ek-decorated-sign" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div v-if="decoration!=='none'" class="ek-decoration" :style="decorationPositionStyle" aria-hidden="true">{{decorationSymbols[decoration]}}</div>
+       <div class="ek-overlay-stage" aria-label="Decorative overlays">
+        <div v-for="layer in layers" :key="layer.id" class="ek-overlay-layer" :class="{'ek-overlay-selected':selectedLayerId===layer.id}" :style="layerStyle(layer)" role="button" tabindex="0" :aria-label="`Select ${layer.kind} decoration`" @pointerdown="beginLayerDrag($event,layer)" @pointermove="dragLayer($event,layer)" @pointerup="stopLayerDrag" @pointercancel="stopLayerDrag" @keydown.enter="selectedLayerId=layer.id;studioTab='style'">{{decorationSymbols[layer.kind]}}</div>
+       </div>
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
        <div class="ek-sign-tagline">Capture · Share · Remember</div>
        <div class="ek-sign-ornament">✦ &nbsp; ✦ &nbsp; ✦</div>
@@ -545,3 +605,11 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 </style>
 
 <style> .ek-decorated-sign{position:relative;isolation:isolate}.ek-decorated-sign>:not(.ek-decoration){position:relative;z-index:2}.ek-decoration{line-height:1.4;letter-spacing:.14em}.ek-print-sign{background-color:var(--sign-bg)!important} </style>
+
+<style>
+.ek-overlay-stage{position:absolute!important;inset:0;z-index:3!important;pointer-events:none!important;overflow:hidden}
+.ek-overlay-layer{position:absolute;pointer-events:auto;cursor:grab;touch-action:none;user-select:none;text-align:center;font-size:clamp(18px,3.5vw,55px);line-height:1.2;white-space:nowrap;display:flex;align-items:center;justify-content:center;min-height:26px}
+.ek-overlay-layer:active{cursor:grabbing}
+@media screen{.ek-overlay-selected{outline:2px dashed currentColor;outline-offset:3px}}
+@media print{.ek-overlay-layer{cursor:default!important;outline:none!important}}
+</style>
