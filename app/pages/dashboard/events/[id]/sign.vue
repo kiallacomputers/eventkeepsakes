@@ -160,22 +160,52 @@ const typography=reactive<Record<TextKey,TextStyle>>({
  footer:{size:12,color:'#B18A50',font:'Arial, sans-serif',bold:false,italic:false,underline:false},
 })
 const selectedTypography=ref<TextKey>('event')
-const studioTab=ref<'templates'|'text'|'style'|'photo'|'qr'|'saved'>('templates')
+const studioTab=ref<'category'|'photo'|'colours'|'text'|'style'|'qr'|'saved'>('category')
 const brandColour=ref('#0C1D2D')
 const brandAccent=ref('#B18A50')
-const templates=[
- {name:'Classic Elegance',theme:'classic',ink:'#0C1D2D',accent:'#B18A50',font:"'Playfair Display', serif"},
- {name:'Wedding Romance',theme:'romance',ink:'#513F48',accent:'#B7828C',font:"'Great Vibes', cursive"},
- {name:'Modern Minimal',theme:'modern',ink:'#19242D',accent:'#516A78',font:"'Montserrat', sans-serif"},
- {name:'Garden Party',theme:'classic',ink:'#304C3C',accent:'#8FAD79',font:"'Cormorant Garamond', serif"},
- {name:'Birthday',theme:'modern',ink:'#653E86',accent:'#E88E45',font:"'Fredoka', sans-serif"},
- {name:'Graduation',theme:'classic',ink:'#172D54',accent:'#B99A49',font:"'Cinzel', serif"},
- {name:'Baby Shower',theme:'romance',ink:'#6E8296',accent:'#D7A4A6',font:"'Quicksand', sans-serif"},
- {name:'Retro Celebration',theme:'modern',ink:'#623F32',accent:'#C47A43',font:"'Berkshire Swash', serif"}
-]
-function applyTemplate(t:typeof templates[number]){theme.value=t.theme as 'classic'|'romance'|'modern';brandColour.value=t.ink;brandAccent.value=t.accent;typography.event.font=t.font;typography.heading.font=t.font;studioTab.value='text'}
-function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='text';fontBrowserOpen.value=false}
-
+// Category-first design: each category owns three independent 3-tone palettes.
+const categories=[
+ {id:'wedding',name:'Wedding',icon:'♡',palettes:[['Ivory & Champagne','#FFF9ED','#C7A46A','#29384B'],['Blush Romance','#F8E8E7','#C68C95','#59414B'],['Sage Garden','#F3F1E7','#94A98B','#3D5946']]},
+ {id:'birthday',name:'Birthday',icon:'✦',palettes:[['Confetti Party','#FFF1B6','#FA7090','#6376D5'],['Neon Celebration','#201A36','#FF5DB1','#57E7DB'],['Pastel Fun','#F9E3F0','#A9C8F2','#F4BB7D']]},
+ {id:'celebration',name:'Celebration',icon:'★',palettes:[['Midnight Gold','#152033','#D3B16B','#FFF8E8'],['Emerald Luxe','#163D35','#C6A56B','#F4F0E7'],['Modern Silver','#29343E','#BBC7CF','#FFFFFF']]},
+ {id:'christening',name:'Christening',icon:'✧',palettes:[['Soft Blue','#E9F3F8','#A6C5D9','#5A7C95'],['Blush Blessing','#FFF3F0','#E8B7BE','#977B84'],['Pure Ivory','#FFFDF6','#E4D7B7','#9E936F']]},
+ {id:'baby',name:'Baby Shower',icon:'☼',palettes:[['Cotton Candy','#FFF3F7','#E7A6BE','#735D77'],['Little Star','#F1F5FF','#A4BBE5','#415A85'],['Mint & Cream','#F8F8EB','#B2D1BA','#53745D']]},
+ {id:'graduation',name:'Graduation',icon:'✹',palettes:[['Navy & Gold','#F8F4E9','#B99A49','#172D54'],['Burgundy','#FFF9F2','#B88C69','#622E3A'],['Black Tie','#F7F7F7','#C2C2C2','#242424']]},
+ {id:'corporate',name:'Corporate',icon:'▣',palettes:[['Executive Blue','#F4F8FB','#6C99B5','#1B3548'],['Modern Teal','#EFF7F5','#75A9A0','#214E49'],['Slate','#F3F5F6','#A2B0B9','#344450']]},
+ {id:'anniversary',name:'Anniversary',icon:'♥',palettes:[['Rose Gold','#FFF5F1','#C99B85','#634B51'],['Golden Years','#FCF8EA','#BBA15D','#484132'],['Pearl','#FAF7F4','#B9AFB3','#5A5260']]},
+ {id:'memorial',name:'Celebration of Life',icon:'❀',palettes:[['Peaceful Sage','#F4F7F1','#A0B39A','#40564B'],['Gentle Lavender','#F8F5FB','#B9A8D1','#5B516B'],['Warm Remembrance','#FAF6F0','#C5A88C','#594D46']]},
+ {id:'other',name:'Other Event',icon:'✳',palettes:[['Timeless','#FFF9ED','#C7A46A','#29384B'],['Ocean','#EAF6FA','#83BDCB','#2D576A'],['Sunset','#FFF0E7','#F0A16D','#6C465A']]}
+] as const
+const categoryId=ref<string>('wedding')
+const paletteIndex=ref(0)
+const currentCategory=computed(()=>categories.find(c=>c.id===categoryId.value)||categories[0])
+const currentPalette=computed(()=>currentCategory.value.palettes[Math.min(paletteIndex.value,2)]!)
+const paletteBackground=ref('#FFF9ED')
+function choosePalette(index:number){paletteIndex.value=index;const p=currentPalette.value;paletteBackground.value=p[1];brandAccent.value=p[2];brandColour.value=p[3];for(const k of ['event','heading','message','action'] as const)typography[k].color=p[3];for(const k of ['date','footer'] as const)typography[k].color=p[2]}
+function chooseCategory(id:string){categoryId.value=id;choosePalette(0);studioTab.value='photo'}
+const studioSteps=[{id:'category',name:'Category',icon:'▦'},{id:'photo',name:'Photo',icon:'▧'},{id:'colours',name:'Colour Theme',icon:'◉'},{id:'text',name:'Text',icon:'T'},{id:'style',name:'Style',icon:'✧'},{id:'qr',name:'QR Code',icon:'▣'},{id:'saved',name:'Save',icon:'▤'}] as const
+function nextStudioStep(){const i=studioSteps.findIndex(x=>x.id===studioTab.value);studioTab.value=studioSteps[Math.min(i+1,studioSteps.length-1)].id}
+function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='style';fontBrowserOpen.value=false}
+// Decoration assets are CSS/SVG primitives rather than third-party image files.
+type DecorationKind='none'|'floral'|'confetti'|'stars'|'ribbon'|'clouds'|'cross'|'geometric'|'leaves'|'hearts'
+const decoration=ref<DecorationKind>('none')
+const decorationOpacity=ref(65)
+const decorationSize=ref(85)
+const decorationRotation=ref(0)
+const decorationPosition=ref<'top-left'|'top-right'|'bottom-left'|'bottom-right'>('top-left')
+const decorationColour=ref('#B18A50')
+const decorationNames:[DecorationKind,string][]=[['none','None'],['floral','Floral corners'],['confetti','Confetti'],['stars','Sparkles'],['ribbon','Ribbon'],['clouds','Soft clouds'],['cross','Cross'],['geometric','Geometric'],['leaves','Botanical leaves'],['hearts','Hearts']]
+const decorationSymbols:Record<DecorationKind,string>={none:'',floral:'❀ ❁ ❀',confetti:'✦ ● ◆ ✧ ★',stars:'✧ ✦ ✧',ribbon:'❧ ❧',clouds:'☁ ☁',cross:'✝',geometric:'◇ ◆ ◇',leaves:'❧ ❦ ❧',hearts:'♡ ♥ ♡'}
+const decorationPositionStyle=computed(()=>({
+ position:'absolute' as const,zIndex:1,pointerEvents:'none' as const,color:decorationColour.value,
+ opacity:decorationOpacity.value/100,fontSize:`${decorationSize.value/4}px`,
+ transform:`rotate(${decorationRotation.value}deg)`,
+ top:decorationPosition.value.startsWith('top')?'3%':undefined,
+ bottom:decorationPosition.value.startsWith('bottom')?'3%':undefined,
+ left:decorationPosition.value.endsWith('left')?'3%':undefined,
+ right:decorationPosition.value.endsWith('right')?'3%':undefined,
+ maxWidth:'50%',whiteSpace:'normal' as const
+}))
 // Load only fonts currently used on the poster, avoiding a large upfront download.
 const selectedWebFonts=computed(()=>[...new Set(typographySections.map(({key})=>typography[key]).map(t=>fontOptions.find(f=>f.value===t.font)?.family).filter((f):f is string=>!!f))])
 const fontStylesheetUrl=computed(()=>selectedWebFonts.value.length?'https://fonts.googleapis.com/css2?'+selectedWebFonts.value.map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
@@ -232,8 +262,8 @@ const coverUrl=ref<string|null>(null),posterCover=ref<string|null>(null),useCove
 const posterName=ref('Welcome poster'),savedPosters=ref<any[]>([]),posterBusy=ref(false),posterError=ref('')
 async function posterAuth(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in again');return {authorization:`Bearer ${session.access_token}`}}
 async function loadPosterAssets(){try{const headers=await posterAuth();const [branding,posters]=await Promise.all([$fetch<any>('/api/owner/branding',{query:{id:String(route.params.id)},headers}),$fetch<any>('/api/owner/posters',{query:{id:String(route.params.id)},headers})]);coverUrl.value=branding.cover_url;savedPosters.value=posters.designs}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}}
-async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,brandColour:brandColour.value,brandAccent:brandAccent.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
-function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
+async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+function openSavedPoster(p:any){const c=p.config||{};paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);categoryId.value=categories.some(x=>x.id===c.categoryId)?c.categoryId:'wedding';paletteIndex.value=[0,1,2].includes(c.paletteIndex)?c.paletteIndex:0;paletteBackground.value=/^#[0-9a-f]{6}$/i.test(c.paletteBackground||'')?c.paletteBackground:'#FFF9ED';decoration.value=decorationNames.some(x=>x[0]===c.decoration)?c.decoration:'none';decorationOpacity.value=Math.min(100,Math.max(0,Number(c.decorationOpacity)||65));decorationSize.value=Math.min(160,Math.max(20,Number(c.decorationSize)||85));decorationRotation.value=Math.min(180,Math.max(-180,Number(c.decorationRotation)||0));decorationPosition.value=['top-left','top-right','bottom-left','bottom-right'].includes(c.decorationPosition)?c.decorationPosition:'top-left';decorationColour.value=/^#[0-9a-f]{6}$/i.test(c.decorationColour||'')?c.decorationColour:'#B18A50';brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
 const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
 
@@ -267,18 +297,34 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
   <p v-if="loading">Loading sign designer…</p><p v-else-if="error" class="text-red-700">{{error}}</p>
   <div v-else-if="item" class="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
    <section class="panel space-y-5 ek-no-print self-start">
-    <nav class="grid grid-cols-3 gap-2" aria-label="Sign designer tools">
-     <button v-for="tab in [{id:'templates',name:'Templates'},{id:'text',name:'Text'},{id:'style',name:'Style'},{id:'photo',name:'Photo'},{id:'qr',name:'QR Code'},{id:'saved',name:'Saved'}]" :key="tab.id" type="button" class="rounded-lg border px-2 py-3 text-sm font-medium" :class="studioTab===tab.id?'bg-[#0C1D2D] text-white':'bg-white text-[#0C1D2D] border-[#D6B077]'" @click="studioTab=tab.id">{{tab.name}}</button>
+    <nav class="grid grid-cols-2 gap-2" aria-label="Sign design steps">
+     <button v-for="(step,i) in studioSteps" :key="step.id" type="button" class="flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm font-medium" :class="studioTab===step.id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'" @click="studioTab=step.id"><span class="opacity-70">{{i+1}}.</span><span>{{step.name}}</span></button>
     </nav>
-    <div v-if="studioTab==='templates'" class="space-y-3"><h2 class="text-lg font-semibold">Choose a starting design</h2><p class="text-sm">Choose a template, then click the sign text to format it.</p>
-     <div class="grid grid-cols-2 gap-2"><button v-for="t in templates" :key="t.name" type="button" class="rounded-xl border border-[#D6B077] p-2 text-left" @click="applyTemplate(t)"><div class="h-20 rounded-md flex items-center justify-center" :style="{background:t.accent,border:'5px solid '+t.ink,color:t.ink}"><span :style="{fontFamily:t.font}">Welcome</span></div><span class="text-xs font-semibold">{{t.name}}</span></button></div>
+    <div v-if="studioTab==='category'" class="space-y-3"><h2 class="text-lg font-semibold">1. Choose your event</h2><p class="text-sm text-[#536273]">Start with an event type. Each has three unique colour themes.</p>
+     <div class="grid grid-cols-2 gap-2"><button v-for="c in categories" :key="c.id" type="button" class="rounded-xl border p-3 text-left" :class="categoryId===c.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077] bg-white'" @click="chooseCategory(c.id)"><span class="text-xl">{{c.icon}}</span><span class="block text-sm font-semibold mt-1">{{c.name}}</span></button></div>
     </div>
-    <div v-if="studioTab==='style'" class="space-y-4"><h2 class="text-lg font-semibold">Customise Style</h2><p class="text-sm text-[#536273]">The EventKeepsakes title and Capture · Share · Remember keep their original wording, font and sizing. Only branding colours can change.</p>
+    <div v-if="studioTab==='colours'" class="space-y-4"><h2 class="text-lg font-semibold">3. Colour Theme</h2><p class="text-sm text-[#536273]">Three coordinated tones designed for {{currentCategory.name}}. Your text and photo are preserved.</p>
+     <button v-for="(p,i) in currentCategory.palettes" :key="i" type="button" class="w-full rounded-xl border p-3 text-left" :class="paletteIndex===i?'border-[#0C1D2D] ring-2 ring-[#D6B077]':'border-[#D6B077]'" @click="choosePalette(i)"><span class="block text-sm font-semibold mb-2">{{p[0]}}</span><span class="flex h-12 overflow-hidden rounded-lg"><span v-for="(colour,j) in p.slice(1)" :key="j" class="flex-1" :style="{background:colour}"></span></span></button>
+     <label class="block text-sm font-medium">Background colour<div class="flex gap-2 mt-2"><input v-model="paletteBackground" type="color" class="h-10 w-12"/><input v-model="paletteBackground" class="input flex-1" maxlength="7"/></div></label>
+     <label class="block text-sm font-medium">Brand title colour<div class="flex gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12"/><input v-model="brandColour" class="input flex-1" maxlength="7"/></div></label>
+     <label class="block text-sm font-medium">Accent / tagline colour<div class="flex gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12"/><input v-model="brandAccent" class="input flex-1" maxlength="7"/></div></label>
+    </div>
+    <div v-if="studioTab==='style'" class="space-y-4"><h2 class="text-lg font-semibold">5. Style & Decorations</h2><p class="text-sm text-[#536273]">The EventKeepsakes title and Capture · Share · Remember keep their original wording, font and sizing. Only branding colours can change.</p>
      <label class="block text-sm font-medium">Branding title colour<div class="flex items-center gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12" /><input v-model="brandColour" class="input flex-1" maxlength="7" aria-label="Brand title hex colour" /></div></label>
      <label class="block text-sm font-medium">Branding accent and tagline colour<div class="flex items-center gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12" /><input v-model="brandAccent" class="input flex-1" maxlength="7" aria-label="Brand accent hex colour" /></div></label>
      <button type="button" class="rounded-lg border px-3 py-2 text-sm" @click="brandColour='#0C1D2D';brandAccent='#B18A50'">Reset branding colours</button>
      <label class="block text-sm font-medium">Background style<select v-model="theme" class="input mt-2"><option value="classic">Classic</option><option value="romance">Romance</option><option value="modern">Modern</option></select></label>
      <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
+    </div>
+    <div v-if="studioTab==='style'" class="space-y-4"><h3 class="font-semibold">Decorative overlays</h3><p class="text-xs text-[#536273]">Decorations print with the sign. Branding always stays legible and locked.</p>
+     <div class="grid grid-cols-2 gap-2"><button v-for="[id,name] in decorationNames" :key="id" type="button" class="rounded-lg border px-2 py-3 text-sm" :class="decoration===id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077]'" @click="decoration=id">{{name}}</button></div>
+     <template v-if="decoration!=='none'">
+      <label class="block text-sm">Overlay colour <input v-model="decorationColour" type="color" class="ml-2 h-9 w-12 align-middle"/></label>
+      <label class="block text-sm">Opacity: {{decorationOpacity}}%<input v-model.number="decorationOpacity" type="range" min="0" max="100" class="w-full"/></label>
+      <label class="block text-sm">Size: {{decorationSize}}%<input v-model.number="decorationSize" type="range" min="20" max="160" class="w-full"/></label>
+      <label class="block text-sm">Rotation: {{decorationRotation}}°<input v-model.number="decorationRotation" type="range" min="-180" max="180" class="w-full"/></label>
+      <label class="block text-sm">Position<select v-model="decorationPosition" class="input mt-1"><option value="top-left">Top left</option><option value="top-right">Top right</option><option value="bottom-left">Bottom left</option><option value="bottom-right">Bottom right</option></select></label>
+     </template>
     </div>
     <div v-if="studioTab==='text'" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
@@ -334,7 +380,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      </select>
     </label>
     <p class="text-xs text-[#536273]">The QR image has a transparent background. White QR uses a subtle dark contrast panel for reliable scanning.</p>
-    </div><div v-if="studioTab==='photo'" class="space-y-4"><h2 class="text-lg font-semibold">Photo & layout</h2>
+    </div><div v-if="studioTab==='photo'" class="space-y-4"><h2 class="text-lg font-semibold">2. Photo & layout</h2>
     <label class="flex items-center gap-2 text-sm"><input v-model="showDate" type="checkbox" /> Show event date</label>
     <label class="flex items-center gap-2 text-sm"><input v-model="useCover" type="checkbox" /> Use event cover photo in poster</label>
     <div v-if="useCover" class="space-y-1">
@@ -351,6 +397,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
     <label v-if="savedPosters.length" class="block text-sm">Saved designs<select class="input mt-2" @change="openSavedPoster(savedPosters.find(p=>p.id===($event.target as HTMLSelectElement).value))"><option value="">Choose saved design</option><option v-for="p in savedPosters" :key="p.id" :value="p.id">{{p.name}}</option></select></label>
     </div>
+    <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" @click="nextStudioStep">Next step →</button>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
@@ -358,8 +405,9 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
    <div class="ek-sign-stage flex flex-col items-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
     <p class="mb-3 text-center text-xs font-semibold text-[#536273]">{{paper}} portrait preview · {{paper==='A4'?'210 × 297 mm':'148 × 210 mm'}} · scaled to fit screen</p>
     <p class="ek-no-print mb-2 text-xs text-[#536273]">Click editable text on the sign to open its font controls.</p>
-    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,'--ek-brand-colour':/^#[0-9a-f]{6}$/i.test(brandColour)?brandColour:'#0C1D2D','--ek-brand-accent':/^#[0-9a-f]{6}$/i.test(brandAccent)?brandAccent:'#B18A50',...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
-      <div class="ek-sign-inner" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
+    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,'--ek-brand-colour':/^#[0-9a-f]{6}$/i.test(brandColour)?brandColour:'#0C1D2D','--ek-brand-accent':/^#[0-9a-f]{6}$/i.test(brandAccent)?brandAccent:'#B18A50','--sign-bg':/^#[0-9a-f]{6}$/i.test(paletteBackground)?paletteBackground:'#FFF9ED',...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
+      <div class="ek-sign-inner ek-decorated-sign" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
+       <div v-if="decoration!=='none'" class="ek-decoration" :style="decorationPositionStyle" aria-hidden="true">{{decorationSymbols[decoration]}}</div>
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
        <div class="ek-sign-tagline">Capture · Share · Remember</div>
        <div class="ek-sign-ornament">✦ &nbsp; ✦ &nbsp; ✦</div>
@@ -495,3 +543,5 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
  .ek-print-sign.ek-paper-a5 .ek-sign-tagline{font-size:5.3pt!important}
 }
 </style>
+
+<style> .ek-decorated-sign{position:relative;isolation:isolate}.ek-decorated-sign>:not(.ek-decoration){position:relative;z-index:2}.ek-decoration{line-height:1.4;letter-spacing:.14em}.ek-print-sign{background:var(--sign-bg)!important} </style>
