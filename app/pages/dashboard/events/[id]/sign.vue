@@ -361,7 +361,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,'--ek-brand-colour':/^#[0-9a-f]{6}$/i.test(brandColour)?brandColour:'#0C1D2D','--ek-brand-accent':/^#[0-9a-f]{6}$/i.test(brandAccent)?brandAccent:'#B18A50',...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
       <div class="ek-sign-inner" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
        <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
-       <div class="ek-sign-tagline">CAPTURE · SHARE · REMEMBER</div>
+       <div class="ek-sign-tagline">Capture · Share · Remember</div>
        <div class="ek-sign-ornament">✦ &nbsp; ✦ &nbsp; ✦</div>
        <h2 class="ek-sign-title ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('event')" @keydown.enter="editOnCanvas('event')">{{item.title}}</h2>
        <p class="ek-sign-date ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('date')" @keydown.enter="editOnCanvas('date')">{{dateLabel}}</p>
@@ -457,4 +457,41 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 @media screen{.ek-editable{cursor:pointer;outline-offset:3px}.ek-editable:hover,.ek-editable:focus-visible{outline:2px dashed #B18A50}}
 .ek-sign-brand{color:var(--ek-brand-colour,#0C1D2D)!important}
 .ek-sign-brand span,.ek-sign-tagline{color:var(--ek-brand-accent,#B18A50)!important}
+</style>
+
+<style>
+/* Keep poster branding consistent with the EventKeepsakes global header.
+   These overrides intentionally win over the older dynamic typography variables. */
+.ek-print-sign .ek-sign-brand {
+ font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+ font-weight: 700 !important;
+ font-style: normal !important;
+ text-decoration: none !important;
+ font-size: 24px !important;
+ line-height: 1.2 !important;
+ letter-spacing: -0.025em !important;
+ color: var(--ek-brand-colour, #0C1D2D) !important;
+}
+.ek-print-sign .ek-sign-brand span {color:var(--ek-brand-accent,#B18A50)!important}
+.ek-print-sign .ek-sign-tagline {
+ font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+ font-weight: 600 !important;
+ font-style: normal !important;
+ text-decoration: none !important;
+ font-size: 10px !important;
+ line-height: 1.4 !important;
+ letter-spacing: 0.2em !important;
+ text-transform: uppercase !important;
+ color:var(--ek-brand-accent,#B18A50)!important;
+}
+@media screen {
+ .ek-print-sign.ek-paper-a5 .ek-sign-brand{font-size:17px!important}
+ .ek-print-sign.ek-paper-a5 .ek-sign-tagline{font-size:7px!important}
+}
+@media print {
+ .ek-print-sign.ek-paper-a4 .ek-sign-brand{font-size:18pt!important}
+ .ek-print-sign.ek-paper-a4 .ek-sign-tagline{font-size:7.5pt!important}
+ .ek-print-sign.ek-paper-a5 .ek-sign-brand{font-size:12.7pt!important}
+ .ek-print-sign.ek-paper-a5 .ek-sign-tagline{font-size:5.3pt!important}
+}
 </style>
