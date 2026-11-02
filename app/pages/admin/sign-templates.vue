@@ -7,6 +7,7 @@ const newName=ref('New Wedding Template'),newCategory=ref('wedding')
 const categories=['wedding','birthday','celebration','christening','baby','graduation','corporate','anniversary','memorial','other']
 const filtered=computed(()=>templates.value.filter(t=>(statusFilter.value==='all'||t.status===statusFilter.value)&&`${t.name} ${t.category}`.toLowerCase().includes(search.value.toLowerCase())))
 const defaultConfig=()=>({
+ contentOrder:['heading','event','date','message','qr','action'],
  paper:'A4',theme:'classic',heading:'Welcome to our wedding',message:'Scan the QR code to share your photos and videos.',showDate:true,useCover:false,
  qrColourMode:'dark',qrPosition:'bottom',qrSize:52,photoOverlay:28,photoFill:false,categoryId:newCategory.value,paletteIndex:0,paletteBackground:'#FFF9ED',
  layers:[],decoration:'none',decorationOpacity:65,decorationSize:85,decorationRotation:0,decorationPosition:'top-left',decorationColour:'#B18A50',
@@ -28,8 +29,15 @@ async function create(){busy.value=true;error.value='';try{
  const r=await $fetch<any>('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{action:'create',name:newName.value,category:newCategory.value,config:defaultConfig()}})
  createOpen.value=false;await load();openEditor(r.template);dialog.show('Draft template created.','success')
  }catch(e:any){error.value=errText(e)}finally{busy.value=false}}
-function openEditor(t:any){editing.value=JSON.parse(JSON.stringify(t));editing.value.config??=defaultConfig();editing.value.config.typography??=defaultConfig().typography;for(const f of fields)editing.value.config.typography[f.key]??=defaultConfig().typography[f.key]}
+const contentLabels:Record<string,string>={heading:'Welcome heading',event:'Event name',date:'Date',message:'Guest message',qr:'QR code',action:'QR instructions'}
+const contentKeys=['heading','event','date','message','qr','action']
+function orderedKeys(c:any){const stored=Array.isArray(c?.contentOrder)?c.contentOrder:contentKeys;return [...new Set([...stored.filter((x:string)=>contentKeys.includes(x)),...contentKeys])]}
+function moveContent(c:any,key:string,delta:number){const order=orderedKeys(c);const from=order.indexOf(key),to=from+delta;if(to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];c.contentOrder=order}
+function styleFor(c:any,key:string){const t=c.typography?.[key]||{};return {fontFamily:t.font||'Georgia, serif',fontSize:`${Math.max(8,Number(t.size||16)*.65)}px`,color:t.color||t.colour||'#6B431D',fontWeight:t.bold?'bold':'normal',fontStyle:t.italic?'italic':'normal',textAlign:c.textPlacement?.[key]?.align||'center'}}
+function openEditor(t:any){editing.value=JSON.parse(JSON.stringify(t));editing.value.config??=defaultConfig();editing.value.config.typography??=defaultConfig().typography;for(const f of fields){editing.value.config.typography[f.key]??=defaultConfig().typography[f.key];const font=editing.value.config.typography[f.key];font.color??=font.colour||'#6B431D';font.colour=font.color}editing.value.config.contentOrder=orderedKeys(editing.value.config)}
 async function save(t:any){busy.value=true;error.value='';try{
+ for(const font of Object.values(t.config.typography||{}) as any[]){font.color=font.colour||font.color;delete font.colour}
+ t.config.contentOrder=orderedKeys(t.config)
  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
  dialog.show('Template saved.','success');await load();editing.value=null
  }catch(e:any){error.value=errText(e)}finally{busy.value=false}}
@@ -98,13 +106,19 @@ onMounted(load)
        <label class="text-sm">QR size (25–70%)<input v-model.number="editing.config.qrSize" type="range" min="25" max="70" class="w-full mt-2"/></label>
        <label class="text-sm">Show event date<input v-model="editing.config.showDate" type="checkbox" class="ml-3"/></label>
       </div>
+      <h4 class="font-semibold border-t pt-3">Sign content order</h4>
+      <p class="text-xs text-[#536273]">Reorder text and QR code. The same order will be used on the customer's sign.</p>
+      <div v-for="(key,index) in orderedKeys(editing.config)" :key="key" class="flex items-center justify-between rounded border px-3 py-2 text-sm">
+       <span>{{index+1}}. {{contentLabels[key]}}</span>
+       <div class="flex gap-2"><button type="button" class="btn" :disabled="index===0" :aria-label="'Move '+contentLabels[key]+' up'" @click="moveContent(editing.config,key,-1)">↑</button><button type="button" class="btn" :disabled="index===orderedKeys(editing.config).length-1" :aria-label="'Move '+contentLabels[key]+' down'" @click="moveContent(editing.config,key,1)">↓</button></div>
+      </div>
       <h4 class="font-semibold border-t pt-3">Typography defaults</h4>
       <div v-for="f in fields" :key="f.key" class="rounded-lg border border-[#D6B077] p-3 space-y-2">
        <strong class="text-sm">{{f.label}}</strong>
        <div class="grid grid-cols-2 gap-2">
         <div class="text-xs min-w-0"><span>Font</span><SignFontPicker v-model="editing.config.typography[f.key].font" :event-category="editing.category" :label="f.label+' font'"/></div>
         <label class="text-xs">Size<input v-model.number="editing.config.typography[f.key].size" type="number" min="8" max="110" class="input w-full mt-1"/></label>
-        <label class="text-xs">Colour<input v-model="editing.config.typography[f.key].colour" type="color" class="block mt-1 h-9 w-full"/></label>
+        <label class="text-xs">Colour<input v-model="editing.config.typography[f.key].color" type="color" class="block mt-1 h-9 w-full"/></label>
         <div class="flex gap-4 items-end"><label class="text-xs"><input v-model="editing.config.typography[f.key].bold" type="checkbox"/> Bold</label><label class="text-xs"><input v-model="editing.config.typography[f.key].italic" type="checkbox"/> Italic</label></div>
        </div>
       </div>
@@ -116,16 +130,17 @@ onMounted(load)
       <div class="relative mx-auto w-full max-w-[390px] overflow-hidden border border-[#D6B077] shadow-sm" style="aspect-ratio:210/297" :style="{backgroundColor:editing.config.paletteBackground||'#FFF9ED'}">
        <img v-if="editing.background_url" :src="editing.background_url" alt="" class="absolute inset-0 w-full h-full object-fill"/>
        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-[12%] py-[13%] gap-2">
-        <div :style="{fontFamily:editing.config.typography.heading.font,fontSize:`${Math.max(10,Number(editing.config.typography.heading.size)*.6)}px`,color:editing.config.typography.heading.colour,fontWeight:editing.config.typography.heading.bold?'bold':'normal',fontStyle:editing.config.typography.heading.italic?'italic':'normal'}">{{editing.config.heading}}</div>
-        <div :style="{fontFamily:editing.config.typography.event.font,fontSize:`${Math.max(12,Number(editing.config.typography.event.size)*.65)}px`,color:editing.config.typography.event.colour,fontWeight:editing.config.typography.event.bold?'bold':'normal',fontStyle:editing.config.typography.event.italic?'italic':'normal'}">Daniel &amp; Hannah</div>
-        <div v-if="editing.config.showDate" :style="{fontFamily:editing.config.typography.date.font,fontSize:`${Math.max(10,Number(editing.config.typography.date.size)*.65)}px`,color:editing.config.typography.date.colour}">15 MAY 2026</div>
-        <div class="whitespace-pre-line" :style="{fontFamily:editing.config.typography.message.font,fontSize:`${Math.max(9,Number(editing.config.typography.message.size)*.65)}px`,color:editing.config.typography.message.colour}">{{editing.config.message}}</div>
-        <div class="bg-white border border-[#BBB] p-2" :style="{width:`${editing.config.qrSize}%`,order:editing.config.qrPosition==='top'?-1:editing.config.qrPosition==='middle'?2:10}">
-         <div class="aspect-square border-4 border-dashed border-[#555] flex items-center justify-center text-xs text-[#555]">QR CODE</div>
-        </div>
+        <template v-for="key in orderedKeys(editing.config)" :key="key">
+         <div v-if="key==='heading'" :style="styleFor(editing.config,'heading')">{{editing.config.heading}}</div>
+         <div v-else-if="key==='event'" :style="styleFor(editing.config,'event')">Daniel &amp; Hannah</div>
+         <div v-else-if="key==='date'&&editing.config.showDate" :style="styleFor(editing.config,'date')">15 MAY 2026</div>
+         <div v-else-if="key==='message'" class="whitespace-pre-line" :style="styleFor(editing.config,'message')">{{editing.config.message}}</div>
+         <div v-else-if="key==='qr'" class="bg-white border border-[#BBB] p-2" :style="{width:`${editing.config.qrSize}%`}"><div class="aspect-square border-4 border-dashed border-[#555] flex items-center justify-center text-xs text-[#555]">QR CODE</div></div>
+         <div v-else-if="key==='action'" :style="styleFor(editing.config,'action')">Point your phone camera here</div>
+        </template>
        </div>
       </div>
-      <p class="text-xs text-[#536273] mt-2">This is an approximate admin preview. The event owner's sign uses their real QR code and event details.</p>
+      <p class="text-xs text-[#536273] mt-2">This preview uses sample event details and a QR placeholder. The customer sign uses the saved content order and typography.</p>
      </div>
     </div>
    </div>
