@@ -36,7 +36,7 @@ function moveContent(c:any,key:string,delta:number){const order=orderedKeys(c);c
 function styleFor(c:any,key:string){const t=c.typography?.[key]||{};return {fontFamily:t.font||'Georgia, serif',fontSize:`${Math.max(8,Number(t.size||16)*.65)}px`,color:t.color||t.colour||'#6B431D',fontWeight:t.bold?'bold':'normal',fontStyle:t.italic?'italic':'normal',textAlign:c.textPlacement?.[key]?.align||'center'}}
 function openEditor(t:any){editing.value=JSON.parse(JSON.stringify(t));editing.value.config??=defaultConfig();editing.value.config.typography??=defaultConfig().typography;for(const f of fields){editing.value.config.typography[f.key]??=defaultConfig().typography[f.key];const font=editing.value.config.typography[f.key];font.color??=font.colour||'#6B431D';font.colour=font.color}editing.value.config.contentOrder=orderedKeys(editing.value.config)}
 async function save(t:any){busy.value=true;error.value='';try{
- for(const font of Object.values(t.config.typography||{}) as any[]){font.color=font.colour||font.color;delete font.colour}
+ for(const font of Object.values(t.config.typography||{}) as any[]){font.color=font.color||font.colour;delete font.colour}
  t.config.contentOrder=orderedKeys(t.config)
  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
  dialog.show('Template saved.','success');await load();editing.value=null
@@ -126,21 +126,11 @@ onMounted(load)
       <div class="flex flex-wrap gap-2"><button class="btn" :disabled="busy" @click="save(editing)">Save changes</button><button class="btn" type="button" @click="editing=null">Cancel</button></div>
      </div>
      <div class="lg:sticky lg:top-3 self-start">
-      <p class="text-sm font-semibold mb-2">Template preview (sample event details)</p>
-      <div class="relative mx-auto w-full max-w-[390px] overflow-hidden border border-[#D6B077] shadow-sm" style="aspect-ratio:210/297" :style="{backgroundColor:editing.config.paletteBackground||'#FFF9ED'}">
-       <img v-if="editing.background_url" :src="editing.background_url" alt="" class="absolute inset-0 w-full h-full object-fill"/>
-       <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-[12%] py-[13%] gap-2">
-        <template v-for="key in orderedKeys(editing.config)" :key="key">
-         <div v-if="key==='heading'" :style="styleFor(editing.config,'heading')">{{editing.config.heading}}</div>
-         <div v-else-if="key==='event'" :style="styleFor(editing.config,'event')">Daniel &amp; Hannah</div>
-         <div v-else-if="key==='date'&&editing.config.showDate" :style="styleFor(editing.config,'date')">15 MAY 2026</div>
-         <div v-else-if="key==='message'" class="whitespace-pre-line" :style="styleFor(editing.config,'message')">{{editing.config.message}}</div>
-         <div v-else-if="key==='qr'" class="bg-white border border-[#BBB] p-2" :style="{width:`${editing.config.qrSize}%`}"><div class="aspect-square border-4 border-dashed border-[#555] flex items-center justify-center text-xs text-[#555]">QR CODE</div></div>
-         <div v-else-if="key==='action'" :style="styleFor(editing.config,'action')">Point your phone camera here</div>
-        </template>
-       </div>
+      <p class="text-sm font-semibold mb-2">Live template preview (sample event details)</p>
+      <div class="mx-auto w-full max-w-[390px]">
+       <SignStudioCanvas :config="editing.config" :background-url="editing.background_url" event-name="Daniel & Hannah" event-date="15 MAY 2026" sample/>
       </div>
-      <p class="text-xs text-[#536273] mt-2">This preview uses sample event details and a QR placeholder. The customer sign uses the saved content order and typography.</p>
+      <p class="text-xs text-[#536273] mt-2">This uses the same rendering component as the customer sign. The sample QR is scannable but points to an example URL.</p>
      </div>
     </div>
    </div>

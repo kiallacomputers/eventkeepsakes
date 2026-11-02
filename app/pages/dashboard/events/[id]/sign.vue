@@ -190,9 +190,9 @@ const currentPalette=computed(()=>currentCategory.value.palettes[Math.min(palett
 const paletteBackground=ref('#FFF9ED')
 function choosePalette(index:number){paletteIndex.value=index;const p=currentPalette.value;paletteBackground.value=p[1];brandAccent.value=p[2];brandColour.value=p[3];for(const k of ['event','heading','message','action'] as const)typography[k].color=p[3];for(const k of ['date','footer'] as const)typography[k].color=p[2]}
 function chooseCategory(id:string){categoryId.value=id;choosePalette(0);studioTab.value='photo'}
-const studioSteps=[{id:'category',name:'Category',icon:'▦'},{id:'photo',name:'Photo',icon:'▧'},{id:'colours',name:'Colour Theme',icon:'◉'},{id:'text',name:'Text',icon:'T'},{id:'style',name:'Style',icon:'✧'},{id:'qr',name:'QR Code',icon:'▣'},{id:'saved',name:'Save',icon:'▤'}] as const
+const studioSteps=[{id:'category',name:'Choose Template',icon:'▦'},{id:'text',name:'Personalise',icon:'T'},{id:'saved',name:'Save Sign',icon:'▤'}] as const
 function nextStudioStep(){const i=studioSteps.findIndex(x=>x.id===studioTab.value);studioTab.value=studioSteps[Math.min(i+1,studioSteps.length-1)].id}
-function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='style';fontBrowserOpen.value=false}
+function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='text';fontBrowserOpen.value=false}
 // Decoration assets are CSS/SVG primitives rather than third-party image files.
 type DecorationKind='none'|'floral'|'confetti'|'stars'|'ribbon'|'clouds'|'cross'|'geometric'|'leaves'|'hearts'
 
@@ -368,7 +368,7 @@ function applyLibraryLayout(t:any){
  useCover.value=false;photoFill.value=false;posterCover.value=null
  templateBackground.value=t.background_url||null;backgroundPath.value=t.background_path||null
  selectedLayoutId.value=t.id;backgroundTemplateId.value=t.id;layoutName.value=t.name
- studioTab.value='style'
+ studioTab.value='text'
 }
 async function submitMyLayout(){const t=selectedLayout.value;if(!t||t.status!=='personal')return
  if(!publishPermission.value){layoutError.value='Please confirm that you own or have permission to share all artwork in this layout.';return}
@@ -377,7 +377,7 @@ async function submitMyLayout(){const t=selectedLayout.value;if(!t||t.status!=='
  await refreshLayouts();dialog.show('Layout submitted for administrator review.','success')
  }catch(e:any){layoutError.value=e?.data?.statusMessage||e.message}finally{layoutBusy.value=false}}
 
-async function savePoster(){posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,qrPosition:qrPosition.value,qrSize:qrSize.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,backgroundTemplateId:backgroundTemplateId.value,layers:layers.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,textPlacement:JSON.parse(JSON.stringify(textPlacement)),contentOrder:[...contentOrder.value],typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+async function savePoster(){if(!selectedLayoutId.value){posterError.value='Choose an official template before saving.';return}posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,qrPosition:qrPosition.value,qrSize:qrSize.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,backgroundTemplateId:backgroundTemplateId.value,layers:layers.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,textPlacement:JSON.parse(JSON.stringify(textPlacement)),contentOrder:[...contentOrder.value],typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
 function openSavedPoster(p:any){if(!p)return;templateBackground.value=null;backgroundPath.value=null;backgroundTemplateId.value=null;selectedLayoutId.value='';const c=p.config||{};if(c.backgroundTemplateId){const source=layoutLibrary.value.find(t=>t.id===c.backgroundTemplateId);if(source){templateBackground.value=source.background_url||null;backgroundTemplateId.value=source.id}}restoreLayers(c.layers);paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';qrPosition.value=['top','middle','bottom'].includes(c.qrPosition)?c.qrPosition:'bottom';qrSize.value=Number.isFinite(Number(c.qrSize))?Math.min(70,Math.max(25,Number(c.qrSize))):52;photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);restoreTextPlacement(c.textPlacement);contentOrder.value=Array.isArray(c.contentOrder)?[...new Set([...c.contentOrder.filter((k:any)=>['heading','event','date','message','qr','action'].includes(k)),...'heading,event,date,message,qr,action'.split(',')])]:['heading','event','date','message','qr','action'];categoryId.value=categories.some(x=>x.id===c.categoryId)?c.categoryId:'wedding';paletteIndex.value=[0,1,2].includes(c.paletteIndex)?c.paletteIndex:0;paletteBackground.value=/^#[0-9a-f]{6}$/i.test(c.paletteBackground||'')?c.paletteBackground:'#FFF9ED';decoration.value=decorationNames.some(x=>x[0]===c.decoration)?c.decoration:'none';decorationOpacity.value=Math.min(100,Math.max(0,Number(c.decorationOpacity)||65));decorationSize.value=Math.min(160,Math.max(20,Number(c.decorationSize)||85));decorationRotation.value=Math.min(180,Math.max(-180,Number(c.decorationRotation)||0));decorationPosition.value=['top-left','top-right','bottom-left','bottom-right'].includes(c.decorationPosition)?c.decorationPosition:'top-left';decorationColour.value=/^#[0-9a-f]{6}$/i.test(c.decorationColour||'')?c.decorationColour:'#B18A50';brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
 const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
@@ -416,62 +416,20 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <nav class="grid grid-cols-2 gap-2" aria-label="Sign design steps">
      <button v-for="(step,i) in studioSteps" :key="step.id" type="button" class="flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm font-medium" :class="studioTab===step.id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'" @click="studioTab=step.id"><span class="opacity-70">{{i+1}}.</span><span>{{step.name}}</span></button>
     </nav>
-    <div v-if="studioTab==='category'" class="space-y-3"><h2 class="text-lg font-semibold">1. Choose your event</h2><p class="text-sm text-[#536273]">Start with an event type. Each has three unique colour themes.</p>
-     <div class="grid grid-cols-2 gap-2"><button v-for="c in categories" :key="c.id" type="button" class="rounded-xl border p-3 text-left" :class="categoryId===c.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077] bg-white'" @click="chooseCategory(c.id)"><span class="text-xl">{{c.icon}}</span><span class="block text-sm font-semibold mt-1">{{c.name}}</span></button></div>
-    </div>
-    <div v-if="studioTab==='category'" class="mt-4 rounded-xl border border-[#D6B077] p-3 space-y-3">
-      <h3 class="font-semibold">Ready-made templates and My Layouts</h3>
-      <p class="text-xs text-[#536273]">Select a published template or a personal layout. Its fonts, text, QR placement, colours and background will be loaded for editing.</p>
-      <div class="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto">
-        <button v-for="t in availableLayouts.filter(t=>t.category===categoryId || t.owner_id)" :key="t.id" type="button" class="rounded-lg border border-[#D6B077] bg-white p-2 text-left" @click="applyLibraryLayout(t)">
-          <img v-if="t.background_url" :src="t.background_url" alt="" class="w-full h-28 object-contain bg-[#F8F2E6]"/>
-          <div v-else class="flex h-28 items-center justify-center bg-[#F8F2E6] text-2xl">✦</div>
-          <span class="block text-sm font-semibold mt-2">{{t.name}}</span><span class="text-xs text-[#536273]">{{t.status==='published'?'Official template':t.status==='pending'?'Submitted for review':'My layout'}}</span>
-        </button>
+    <div v-if="studioTab==='category'" class="space-y-3">
+      <h2 class="text-lg font-semibold">Choose an official template</h2>
+      <p class="text-sm text-[#536273]">Choose a published design. The layout, background, artwork and QR position are set by the administrator.</p>
+      <button class="btn" type="button" @click="refreshLayouts">Refresh templates</button>
+      <div class="grid grid-cols-2 gap-3">
+       <button v-for="t in layoutLibrary.filter(x=>x.status==='published')" :key="t.id" type="button"
+        class="border rounded-lg p-2 text-left" :class="selectedLayoutId===t.id?'ring-2 ring-[#B18A50]':''" @click="applyLibraryLayout(t)">
+        <div class="aspect-[210/297] overflow-hidden">
+         <SignStudioCanvas :config="t.config" :background-url="t.background_url" :event-name="item?.title||'Your event'" :event-date="dateLabel" sample/>
+        </div>
+        <span class="block text-xs font-semibold mt-2">{{t.name}}</span>
+       </button>
       </div>
-      <p v-if="!availableLayouts.length" class="text-xs">No saved layouts yet. Save one in the Save step, or ask an administrator to publish templates.</p>
-    </div>
-    <div v-if="studioTab==='colours'" class="space-y-4"><h2 class="text-lg font-semibold">3. Colour Theme</h2><p class="text-sm text-[#536273]">Three coordinated tones designed for {{currentCategory.name}}. Your text and photo are preserved.</p>
-     <button v-for="(p,i) in currentCategory.palettes" :key="i" type="button" class="w-full rounded-xl border p-3 text-left" :class="paletteIndex===i?'border-[#0C1D2D] ring-2 ring-[#D6B077]':'border-[#D6B077]'" @click="choosePalette(i)"><span class="block text-sm font-semibold mb-2">{{p[0]}}</span><span class="flex h-12 overflow-hidden rounded-lg"><span v-for="(colour,j) in p.slice(1)" :key="j" class="flex-1" :style="{background:colour}"></span></span></button>
-     <label class="block text-sm font-medium">Background colour<div class="flex gap-2 mt-2"><input v-model="paletteBackground" type="color" class="h-10 w-12"/><input v-model="paletteBackground" class="input flex-1" maxlength="7"/></div></label>
-     <label class="block text-sm font-medium">Brand title colour<div class="flex gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12"/><input v-model="brandColour" class="input flex-1" maxlength="7"/></div></label>
-     <label class="block text-sm font-medium">Accent / tagline colour<div class="flex gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12"/><input v-model="brandAccent" class="input flex-1" maxlength="7"/></div></label>
-    </div>
-    <div v-if="studioTab==='style'" class="space-y-4"><h2 class="text-lg font-semibold">5. Style & Decorations</h2>
-     <label class="block text-sm font-medium">Background style<select v-model="theme" class="input mt-2"><option value="classic">Classic</option><option value="romance">Romance</option><option value="modern">Modern</option></select></label>
-     <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
-    </div>
-    <div v-if="studioTab==='style'" class="space-y-4">
-     <h3 class="font-semibold">Professional artwork</h3>
-     <p class="text-xs text-[#536273]">Original transparent illustrations. Add artwork, then drag it around the sign. Use a matching pair for coordinated corners.</p>
-     <button type="button" class="w-full rounded-lg border border-[#D6B077] px-3 py-2 text-sm font-semibold" @click="addMatchingCorners">Add matching corner pair</button>
-     <input v-model="artworkSearch" class="input w-full" placeholder="Search flowers, balloons, frames..." aria-label="Search artwork"/>
-     <label class="flex items-center gap-2 text-xs"><input v-model="artworkCategoryOnly" type="checkbox"/> Show artwork for this event category</label>
-     <div class="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-      <button v-for="art in filteredArtwork" :key="art.id" type="button" class="rounded-lg border border-[#D6B077] bg-white p-2 text-center hover:bg-[#F4E9D8]" @click="addArtwork(art.id)">
-       <img :src="artworkUrl(art.id)" :alt="art.name" loading="lazy" class="w-full h-24 object-contain"/>
-       <span class="text-xs">{{art.name}}</span>
-      </button>
-     </div>
-     <p v-if="layers.length>=20" class="text-xs text-amber-800">Maximum 20 overlays per sign.</p>
-     <div v-if="layers.length" class="space-y-2">
-      <h4 class="font-semibold">Layers ({{layers.length}})</h4>
-      <button v-for="(layer,i) in [...layers].reverse()" :key="layer.id" type="button" class="block w-full rounded-lg border px-3 py-2 text-left text-sm capitalize" :class="selectedLayerId===layer.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077]'" @click="selectedLayerId=layer.id">{{layers.length-i}} · {{layer.asset?artworkLibrary.find(a=>a.id===layer.asset)?.name:layer.kind}}</button>
-     </div>
-     <div v-if="selectedLayer" class="space-y-3 rounded-xl border border-[#D6B077] p-3">
-      <h4 class="font-semibold capitalize">Selected: {{selectedLayer.asset?artworkLibrary.find(a=>a.id===selectedLayer.asset)?.name:selectedLayer.kind}}</h4>
-      <p v-if="selectedLayer.asset" class="text-xs text-[#536273]">Illustration colours are part of the artwork; use opacity, size, rotation and flip to customise.</p><label v-else class="block text-sm">Colour <input v-model="selectedLayer.colour" type="color" class="ml-2 h-9 w-12 align-middle"/></label>
-      <label class="block text-sm">Opacity {{selectedLayer.opacity}}%<input v-model.number="selectedLayer.opacity" type="range" min="0" max="100" class="w-full"/></label>
-      <label class="block text-sm">Size {{selectedLayer.size}}%<input v-model.number="selectedLayer.size" type="range" min="5" max="90" class="w-full"/></label>
-      <label class="block text-sm">Rotation {{selectedLayer.rotation}}°<input v-model.number="selectedLayer.rotation" type="range" min="-180" max="180" class="w-full"/></label>
-      <div class="grid grid-cols-2 gap-2">
-       <button type="button" class="rounded-lg border p-2 text-sm" @click="selectedLayer.flip=!selectedLayer.flip">Flip horizontally</button>
-       <button type="button" class="rounded-lg border p-2 text-sm" @click="duplicateLayer">Duplicate</button>
-       <button type="button" class="rounded-lg border p-2 text-sm" @click="moveLayer(selectedLayer.id,1)">Bring forward</button>
-       <button type="button" class="rounded-lg border p-2 text-sm" @click="moveLayer(selectedLayer.id,-1)">Send backward</button>
-       <button type="button" class="col-span-2 rounded-lg border border-red-300 p-2 text-sm text-red-800" @click="removeLayer(selectedLayer.id)">Remove overlay</button>
-      </div>
-     </div>
+      <p v-if="!layoutLibrary.some(t=>t.status==='published')" class="text-sm">No published templates available yet.</p>
     </div>
     <div v-if="studioTab==='text'" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
@@ -481,7 +439,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      <h3 class="font-semibold">Text formatting</h3>
      <label class="block text-sm font-medium">Choose text element
       <select v-model="selectedTypography" class="input mt-1">
-       <option v-for="section in typographySections" :key="section.key" :value="section.key">{{section.label}}</option>
+       <option v-for="section in typographySections.filter(s=>['heading','event','date','message','action'].includes(s.key))" :key="section.key" :value="section.key">{{section.label}}</option>
       </select>
      </label>
      <div class="space-y-2">
@@ -516,56 +474,12 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
       <label class="flex items-center gap-1"><input v-model="selectedText.italic" type="checkbox" /> Italic</label>
       <label class="flex items-center gap-1"><input v-model="selectedText.underline" type="checkbox" /> Underline</label>
      </div>
-     <div v-if="textPlacement[selectedTypography]" class="space-y-2 border-t border-[#D6B077] pt-3">
-       <label class="block text-sm">Text alignment<select v-model="textPlacement[selectedTypography].align" class="input mt-1"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></label>
-       <label class="block text-sm">Move text up / down: {{textPlacement[selectedTypography].offset}} px<input v-model.number="textPlacement[selectedTypography].offset" type="range" min="-100" max="100" class="w-full mt-1"/></label>
-     </div>
-     <p class="text-xs text-[#536273]">Each element has independent styling. A5 automatically scales font sizes down. Your choices are saved with the poster.</p>
+     <p class="text-xs text-[#536273]">You can personalise text, fonts, sizes and colours. The administrator controls the artwork and layout.</p>
     </div>
-    </div><div v-if="studioTab==='qr'" class="space-y-4"><h2 class="text-lg font-semibold">QR code</h2>
-    <label class="block text-sm font-medium">QR code colour
-     <select v-model="qrColourMode" class="input mt-2">
-      <option value="auto">Automatic (matches sign background)</option>
-      <option value="dark">Dark navy</option>
-      <option value="light">White (for dark backgrounds)</option>
-     </select>
-    </label>
-    <label class="block text-sm">QR code position<select v-model="qrPosition" class="input mt-1"><option value="top">Above the event details</option><option value="middle">Between heading and message</option><option value="bottom">Below the message</option></select></label>
-    <label class="block text-sm">QR code size: {{qrSize}}%<input v-model.number="qrSize" type="range" min="25" max="70" step="1" class="w-full mt-1"/></label>
-    <p class="text-xs text-[#536273]">The QR image has a transparent background. White QR uses a subtle dark contrast panel for reliable scanning.</p>
-    </div><div v-if="studioTab==='photo'" class="space-y-4"><h2 class="text-lg font-semibold">2. Photo & layout</h2>
-    <label class="flex items-center gap-2 text-sm"><input v-model="showDate" type="checkbox" /> Show event date</label>
-    <label class="flex items-center gap-2 text-sm"><input v-model="useCover" type="checkbox" /> Use event cover photo in poster</label>
-    <div v-if="useCover" class="space-y-1">
-       <label class="flex items-center gap-2 text-sm"><input v-model="photoFill" type="checkbox" /> Fill entire poster with photo (edge to edge)</label>
-       <p class="text-xs text-[#536273]">When enabled, the photo fills the whole A4/A5 sheet. Edges of the photo may be cropped to fit the paper.</p>
-      <label class="flex items-center justify-between gap-3 text-sm font-medium"><span>Photo fade / text contrast</span><span>{{ photoOverlay }}%</span></label>
-      <input v-model.number="photoOverlay" type="range" min="0" max="85" step="5" class="w-full" aria-label="Photo fade percentage" />
-      <p class="text-xs text-[#536273]">0% shows the photo at full strength; increase the fade if the text becomes hard to read. Default: 28%.</p>
-    </div>
-    <p class="text-xs text-[#536273]">A saved poster keeps its own cover snapshot even if you later replace the event cover.</p>
     </div><div v-if="studioTab==='saved'" class="space-y-4"><h2 class="text-lg font-semibold">Save & load designs</h2>
     <label class="block text-sm">Design name<input v-model="posterName" maxlength="80" class="input mt-2" /></label>
-    <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
-    <div class="rounded-xl border border-[#D6B077] p-3 space-y-3">
-      <h3 class="font-semibold">My reusable layouts</h3>
-      <p class="text-xs text-[#536273]">Save a reusable copy of this design for future events. Event-specific QR links and cover photos are never copied.</p>
-      <label class="block text-sm">Layout name<input v-model="layoutName" maxlength="80" class="input mt-1"/></label>
-      <button type="button" class="btn w-full" :disabled="layoutBusy" @click="saveMyLayout">Save as My Layout</button>
-      <label class="block text-sm">My layouts and published templates
-        <select v-model="selectedLayoutId" class="input mt-1 w-full" @change="applyLibraryLayout(selectedLayout)">
-          <option value="">Select a layout</option>
-          <option v-for="t in availableLayouts" :key="t.id" :value="t.id">{{t.name}} ({{t.status}})</option>
-        </select>
-      </label>
-      <div v-if="selectedLayout?.status==='personal'" class="space-y-2 border-t pt-3">
-        <label class="flex items-start gap-2 text-xs"><input v-model="publishPermission" type="checkbox"/> I own or have permission to share the artwork, and allow EventKeepsakes to offer this design to other customers after review.</label>
-        <button type="button" class="w-full rounded-lg border border-[#D6B077] px-3 py-2" :disabled="layoutBusy||!publishPermission" @click="submitMyLayout">Submit layout for review</button>
-      </div>
-      <p v-if="layoutError" class="text-sm text-red-700">{{layoutError}}</p>
-    </div>
+    <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy||!selectedLayoutId" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
     <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
-    <label v-if="savedPosters.length" class="block text-sm">Saved designs<select class="input mt-2" @change="openSavedPoster(savedPosters.find(p=>p.id===($event.target as HTMLSelectElement).value))"><option value="">Choose saved design</option><option v-for="p in savedPosters" :key="p.id" :value="p.id">{{p.name}}</option></select></label>
     </div>
     <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" @click="nextStudioStep">Next step →</button>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
@@ -574,23 +488,9 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
    </section>
    <div class="ek-sign-stage flex flex-col items-center rounded-2xl bg-[#E8E2D7] p-4 sm:p-8">
     <p class="mb-3 text-center text-xs font-semibold text-[#536273]">{{paper}} portrait preview · {{paper==='A4'?'210 × 297 mm':'148 × 210 mm'}} · scaled to fit screen</p>
-    <p class="ek-no-print mb-2 text-xs text-[#536273]">Click editable text on the sign to open its font controls.</p>
-    <article :class="['ek-print-sign',`ek-sign-${theme}`,paper==='A5'?'ek-paper-a5':'ek-paper-a4',`ek-qr-${qrPosition}`,activePosterCover&&photoFill?'ek-sign-photo-fill':'']" :style="{...signTypographyVars,'--ek-brand-colour':/^#[0-9a-f]{6}$/i.test(brandColour)?brandColour:'#0C1D2D','--ek-brand-accent':/^#[0-9a-f]{6}$/i.test(brandAccent)?brandAccent:'#B18A50','--sign-bg':/^#[0-9a-f]{6}$/i.test(paletteBackground)?paletteBackground:'#FFF9ED',...(activePosterCover&&photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{})}" aria-label="Printable event welcome sign">
-      <div class="ek-sign-inner ek-decorated-sign" :style="activePosterCover&&!photoFill?{backgroundImage:`linear-gradient(rgba(255,255,255,${photoOverlay/100}),rgba(255,255,255,${photoOverlay/100})),url(${activePosterCover})`,backgroundSize:'cover',backgroundPosition:'center'}:{}">
-       <img v-if="templateBackground" class="ek-template-background" :src="templateBackground" alt="" aria-hidden="true"/>
-       <div v-if="decoration!=='none'" class="ek-decoration" :style="decorationPositionStyle" aria-hidden="true">{{decorationSymbols[decoration]}}</div>
-       <div class="ek-overlay-stage" aria-label="Decorative overlays">
-        <div v-for="layer in layers" :key="layer.id" class="ek-overlay-layer" :class="{'ek-overlay-selected':selectedLayerId===layer.id}" :style="layerStyle(layer)" role="button" tabindex="0" :aria-label="`Select ${layer.kind} decoration`" @pointerdown="beginLayerDrag($event,layer)" @pointermove="dragLayer($event,layer)" @pointerup="stopLayerDrag" @pointercancel="stopLayerDrag" @keydown.enter="selectedLayerId=layer.id;studioTab='style'"><img v-if="layer.asset" :src="artworkUrl(layer.asset)" alt="" draggable="false" class="ek-artwork-image"/><span v-else>{{decorationSymbols[layer.kind]}}</span></div>
-       </div>
-       <div class="ek-sign-ornament" style="display:none">✦ &nbsp; ✦ &nbsp; ✦</div>
-       <h2 :style="{...textPlacementStyle('event'),order:contentIndex('event')}" class="ek-sign-title ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('event')" @keydown.enter="editOnCanvas('event')">{{item.title}}</h2>
-       <p :style="{...textPlacementStyle('date'),order:contentIndex('date')}" class="ek-sign-date ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('date')" @keydown.enter="editOnCanvas('date')">{{dateLabel}}</p>
-       <h3 :style="{...textPlacementStyle('heading'),order:contentIndex('heading')}" class="ek-sign-heading ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('heading')" @keydown.enter="editOnCanvas('heading')">{{heading}}</h3>
-       <p :style="{...textPlacementStyle('message'),order:contentIndex('message')}" class="ek-sign-message ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('message')" @keydown.enter="editOnCanvas('message')" style="white-space:pre-line;overflow-wrap:anywhere">{{message}}</p>
-       <div class="ek-sign-qr" :style="{width:`${qrSize}%`,order:contentIndex('qr')}" :class="qrInk==='#FFFFFF'?'ek-sign-qr-light':'ek-sign-qr-dark'"><img :src="qr"  alt="QR code linking to event guest upload page" /></div>
-       <p :style="{...textPlacementStyle('action'),order:contentIndex('action')}" class="ek-sign-action ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('action')" @keydown.enter="editOnCanvas('action')">Point your phone camera here</p>
-       <p :style="textPlacementStyle('footer')" class="ek-sign-footer ek-editable" style="display:none" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('footer')" @keydown.enter="editOnCanvas('footer')">No app or account required</p>
-      </div>
+    <p class="ek-no-print mb-2 text-xs text-[#536273]">Select text on the sign to personalise its font, size and colour.</p>
+    <article class="ek-print-sign ek-shared-print" :class="paper==='A5'?'ek-paper-a5':'ek-paper-a4'" aria-label="Printable event welcome sign">
+      <SignStudioCanvas :config="currentLayoutConfig()" :background-url="templateBackground" :event-name="item.title" :event-date="dateLabel" :qr-url="guestUrl" editable @select="editOnCanvas"/>
     </article>
    </div>
   </div>
@@ -756,4 +656,14 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
 .ek-qr-middle .ek-sign-action{order:4}
 .ek-qr-middle .ek-sign-footer{order:5}
 @media print{.ek-sign-qr{max-width:70%!important}}
+</style>
+
+<style>
+.ek-print-sign.ek-shared-print{padding:0!important;width:min(100%,520px);max-width:520px;aspect-ratio:210/297;box-shadow:0 10px 35px #0C1D2D25;overflow:hidden}
+.ek-print-sign.ek-shared-print.ek-paper-a5{width:min(100%,366.5px);aspect-ratio:148/210}
+.ek-shared-print .ek-shared-content{z-index:4}
+@media print{
+ .ek-print-sign.ek-shared-print{width:210mm!important;height:297mm!important;padding:0!important;max-width:none!important;aspect-ratio:auto!important}
+ .ek-print-sign.ek-shared-print.ek-paper-a5{width:148mm!important;height:210mm!important;padding:0!important}
+}
 </style>
