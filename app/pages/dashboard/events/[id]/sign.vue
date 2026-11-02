@@ -409,16 +409,23 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      <div class="grid grid-cols-2 gap-2"><button v-for="c in categories" :key="c.id" type="button" class="rounded-xl border p-3 text-left" :class="categoryId===c.id?'border-[#0C1D2D] bg-[#F4E9D8]':'border-[#D6B077] bg-white'" @click="chooseCategory(c.id)"><span class="text-xl">{{c.icon}}</span><span class="block text-sm font-semibold mt-1">{{c.name}}</span></button></div>
      <div class="mt-5 border-t border-[#D6B077] pt-4 space-y-3">
       <h3 class="font-semibold">Choose a ready-made sign design</h3>
-      <p class="text-xs text-[#536273]">40 coordinated starting designs. Select one to apply its colours, artwork and layout. You can customise everything afterwards.</p>
+      <p class="text-xs text-[#536273]">Choose a complete sign composition. Previews show your event details and actual QR code. You can customise the design afterwards.</p>
       <input v-model="templateSearch" class="input w-full" placeholder="Search sign designs..." aria-label="Search sign templates"/>
       <label class="flex items-center gap-2 text-xs"><input v-model="showAllTemplates" type="checkbox"/> Show designs from all categories</label>
       <div class="grid grid-cols-2 gap-3 max-h-[490px] overflow-y-auto">
        <button v-for="t in visibleTemplates" :key="t.id" type="button" class="rounded-xl border p-2 text-left hover:border-[#0C1D2D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#B18A50]" :class="selectedTemplateId===t.id?'border-[#0C1D2D] ring-2 ring-[#D6B077]':'border-[#D6B077]'" @click="applySignTemplate(t)">
-        <div class="relative mx-auto overflow-hidden rounded-md border border-[#E8DED1]" style="aspect-ratio:210/297" :style="{background:categories.find(c=>c.id===t.category)?.palettes[t.palette]?.[1]||'#FFF9ED'}">
-         <img :src="artworkUrl(t.primary)" alt="" class="absolute top-[5%] left-[5%] h-[38%] w-[44%] object-contain" :style="t.primary==='gold-frame'||t.primary==='art-deco'?{width:'95%',height:'95%',top:'2.5%',left:'2.5%'}:{}"/>
-         <img v-if="t.secondary" :src="artworkUrl(t.secondary)" alt="" class="absolute bottom-[4%] right-[5%] h-[34%] w-[40%] object-contain"/>
-         <div class="absolute inset-x-[10%] top-[35%] text-center font-serif text-[10px] font-semibold leading-tight" :style="{color:categories.find(c=>c.id===t.category)?.palettes[t.palette]?.[3]}">WELCOME<div class="text-[7px] font-normal">Capture · Share · Remember</div></div>
-         <div class="absolute left-1/2 bottom-[23%] -translate-x-1/2 h-[18%] aspect-square bg-white p-1"><div class="h-full w-full border-[3px] border-dashed border-[#5A6570]"></div></div>
+        <div class="ek-template-mini relative mx-auto overflow-hidden rounded-md border border-[#E8DED1]" :class="`ek-template-mini-${t.id.split('-').pop()}`" style="aspect-ratio:210/297" :style="{background:categories.find(c=>c.id===t.category)?.palettes[t.palette]?.[1]||'#FFF9ED',color:categories.find(c=>c.id===t.category)?.palettes[t.palette]?.[3]||'#29384B','--mini-accent':categories.find(c=>c.id===t.category)?.palettes[t.palette]?.[2]||'#C7A46A'}">
+         <div class="ek-template-mini-border"></div>
+         <img :src="artworkUrl(t.primary)" alt="" class="ek-mini-art ek-mini-primary" :class="{'ek-mini-frame':t.primary==='gold-frame'||t.primary==='art-deco'}" />
+         <img v-if="t.secondary" :src="artworkUrl(t.secondary)" alt="" class="ek-mini-art ek-mini-secondary" />
+         <div class="ek-mini-content">
+          <div class="ek-mini-heading">{{heading}}</div>
+          <div class="ek-mini-title">{{item.title}}</div>
+          <div class="ek-mini-date">{{dateLabel}}</div>
+          <div class="ek-mini-message">{{message}}</div>
+          <div class="ek-mini-qr"><img v-if="qr" :src="qr" alt=""/><span v-else>QR</span></div>
+          <div class="ek-mini-action">Scan to share photos</div>
+         </div>
         </div>
         <span class="mt-2 block text-xs font-semibold">{{t.name}}</span>
         <span class="block text-[10px] text-[#536273]">{{categories.find(c=>c.id===t.category)?.name}}</span>
@@ -429,13 +436,10 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <div v-if="studioTab==='colours'" class="space-y-4"><h2 class="text-lg font-semibold">3. Colour Theme</h2><p class="text-sm text-[#536273]">Three coordinated tones designed for {{currentCategory.name}}. Your text and photo are preserved.</p>
      <button v-for="(p,i) in currentCategory.palettes" :key="i" type="button" class="w-full rounded-xl border p-3 text-left" :class="paletteIndex===i?'border-[#0C1D2D] ring-2 ring-[#D6B077]':'border-[#D6B077]'" @click="choosePalette(i)"><span class="block text-sm font-semibold mb-2">{{p[0]}}</span><span class="flex h-12 overflow-hidden rounded-lg"><span v-for="(colour,j) in p.slice(1)" :key="j" class="flex-1" :style="{background:colour}"></span></span></button>
      <label class="block text-sm font-medium">Background colour<div class="flex gap-2 mt-2"><input v-model="paletteBackground" type="color" class="h-10 w-12"/><input v-model="paletteBackground" class="input flex-1" maxlength="7"/></div></label>
-     <label class="block text-sm font-medium">Brand title colour<div class="flex gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12"/><input v-model="brandColour" class="input flex-1" maxlength="7"/></div></label>
-     <label class="block text-sm font-medium">Accent / tagline colour<div class="flex gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12"/><input v-model="brandAccent" class="input flex-1" maxlength="7"/></div></label>
+     <label class="block text-sm font-medium">Text colour<div class="flex gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12"/><input v-model="brandColour" class="input flex-1" maxlength="7"/></div></label>
+     <label class="block text-sm font-medium">Decorative accent colour<div class="flex gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12"/><input v-model="brandAccent" class="input flex-1" maxlength="7"/></div></label>
     </div>
-    <div v-if="studioTab==='style'" class="space-y-4"><h2 class="text-lg font-semibold">5. Style & Decorations</h2><p class="text-sm text-[#536273]">The EventKeepsakes title and Capture · Share · Remember keep their original wording, font and sizing. Only branding colours can change.</p>
-     <label class="block text-sm font-medium">Branding title colour<div class="flex items-center gap-2 mt-2"><input v-model="brandColour" type="color" class="h-10 w-12" /><input v-model="brandColour" class="input flex-1" maxlength="7" aria-label="Brand title hex colour" /></div></label>
-     <label class="block text-sm font-medium">Branding accent and tagline colour<div class="flex items-center gap-2 mt-2"><input v-model="brandAccent" type="color" class="h-10 w-12" /><input v-model="brandAccent" class="input flex-1" maxlength="7" aria-label="Brand accent hex colour" /></div></label>
-     <button type="button" class="rounded-lg border px-3 py-2 text-sm" @click="brandColour='#0C1D2D';brandAccent='#B18A50'">Reset branding colours</button>
+     <div v-if="studioTab==='style'" class="space-y-4"><h2 class="text-lg font-semibold">5. Style & Decorations</h2><p class="text-sm text-[#536273]">Customise your event design. Decorations stay behind the text and QR code.</p>
      <label class="block text-sm font-medium">Background style<select v-model="theme" class="input mt-2"><option value="classic">Classic</option><option value="romance">Romance</option><option value="modern">Modern</option></select></label>
      <label class="block text-sm font-medium">Paper size<select v-model="paper" class="input mt-2"><option value="A4">A4 portrait</option><option value="A5">A5 portrait</option></select></label>
     </div>
@@ -556,8 +560,6 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
        <div class="ek-overlay-stage" aria-label="Decorative overlays">
         <div v-for="layer in layers" :key="layer.id" class="ek-overlay-layer" :class="{'ek-overlay-selected':selectedLayerId===layer.id}" :style="layerStyle(layer)" role="button" tabindex="0" :aria-label="`Select ${layer.kind} decoration`" @pointerdown="beginLayerDrag($event,layer)" @pointermove="dragLayer($event,layer)" @pointerup="stopLayerDrag" @pointercancel="stopLayerDrag" @keydown.enter="selectedLayerId=layer.id;studioTab='style'"><img v-if="layer.asset" :src="artworkUrl(layer.asset)" alt="" draggable="false" class="ek-artwork-image"/><span v-else>{{decorationSymbols[layer.kind]}}</span></div>
        </div>
-       <div class="ek-sign-brand">Event<span>Keepsakes</span></div>
-       <div class="ek-sign-tagline">Capture · Share · Remember</div>
        <div class="ek-sign-ornament">✦ &nbsp; ✦ &nbsp; ✦</div>
        <h2 class="ek-sign-title ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('event')" @keydown.enter="editOnCanvas('event')">{{item.title}}</h2>
        <p class="ek-sign-date ek-editable" tabindex="0" role="button" title="Click to edit text style" @click="editOnCanvas('date')" @keydown.enter="editOnCanvas('date')">{{dateLabel}}</p>
@@ -749,4 +751,39 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
  .ek-layout-hero .ek-sign-qr{width:45%!important}
  .ek-layout-editorial .ek-sign-qr{width:43%!important}
 }
+</style>
+
+<style>
+.ek-template-mini{isolation:isolate;box-shadow:0 2px 8px #0c1d2d18}
+.ek-template-mini-border{position:absolute;inset:6%;border:1px solid var(--mini-accent);opacity:.7;z-index:1;pointer-events:none}
+.ek-mini-art{position:absolute;object-fit:contain;pointer-events:none;z-index:0;opacity:.82}
+.ek-mini-primary{top:2%;left:1%;width:48%;height:33%}
+.ek-mini-secondary{right:0;bottom:2%;width:45%;height:30%;transform:rotate(180deg)}
+.ek-mini-frame{inset:0!important;width:100%!important;height:100%!important;opacity:.55}
+.ek-mini-content{position:absolute;inset:13% 10%;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3%;text-align:center;overflow:hidden}
+.ek-mini-heading{font-family:Georgia,serif;font-size:clamp(8px,1.1vw,12px);line-height:1.1}
+.ek-mini-title{font-family:Georgia,serif;font-size:clamp(12px,1.8vw,19px);line-height:1.1;font-weight:600;overflow-wrap:anywhere;max-height:25%;overflow:hidden}
+.ek-mini-date{font-size:8px;letter-spacing:.08em;color:var(--mini-accent)}
+.ek-mini-message{font-size:7px;line-height:1.35;white-space:pre-line;max-height:23%;overflow:hidden}
+.ek-mini-qr{width:40%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#fff;padding:3%;flex-shrink:0}
+.ek-mini-qr img{width:100%;height:100%;object-fit:contain}
+.ek-mini-action{font-size:7px;font-weight:600}
+.ek-template-mini-2 .ek-mini-title{font-size:clamp(16px,2.4vw,24px);font-weight:700;order:-2}
+.ek-template-mini-2 .ek-mini-date{order:-1}
+.ek-template-mini-2 .ek-mini-content{gap:2%}
+.ek-template-mini-3 .ek-mini-heading{order:-2}
+.ek-template-mini-3 .ek-mini-qr{order:-1;width:55%}
+.ek-template-mini-3 .ek-mini-action{order:0}
+.ek-template-mini-3 .ek-mini-title{order:1;font-size:11px}
+.ek-template-mini-3 .ek-mini-date{order:2}
+.ek-template-mini-3 .ek-mini-message{order:3}
+.ek-template-mini-4 .ek-mini-content{justify-content:space-between;gap:2%}
+.ek-template-mini-4 .ek-mini-title{order:-2;margin-top:10%;font-size:16px;font-weight:400;font-style:italic}
+.ek-template-mini-4 .ek-mini-date{order:-1}
+.ek-template-mini-4 .ek-mini-heading{order:1}
+.ek-template-mini-4 .ek-mini-message{order:2}
+.ek-template-mini-4 .ek-mini-qr{order:3;width:33%}
+.ek-template-mini-4 .ek-mini-action{order:4}
+/* Branding is deliberately absent from all printed and previewed signs. */
+.ek-print-sign .ek-sign-brand,.ek-print-sign .ek-sign-tagline{display:none!important}
 </style>
