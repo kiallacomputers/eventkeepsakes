@@ -18,6 +18,8 @@ const defaultConfig=()=>({
  message:{font:'Georgia, serif',size:16,colour:'#6B431D',bold:false,italic:false},
  action:{font:'Georgia, serif',size:14,colour:'#6B431D',bold:false,italic:false}
  }})
+const selectedFontFamilies=computed(()=>editing.value?Object.values(editing.value.config?.typography||{}).map((v:any)=>String(v.font||'')).filter(f=>f.startsWith("'")).map(f=>f.split("'")[1]):[])
+const selectedFontsHref=computed(()=>selectedFontFamilies.value.length?'https://fonts.googleapis.com/css2?'+[...new Set(selectedFontFamilies.value)].map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
 const fields=[{key:'heading',label:'Welcome heading'},{key:'event',label:'Event title / names'},{key:'date',label:'Event date'},{key:'message',label:'Guest message'},{key:'action',label:'QR instructions'}]
 async function headers(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in required');return {authorization:`Bearer ${session.access_token}`}}
 function errText(e:any){return e?.data?.statusMessage||e?.message||'Request failed'}
@@ -45,6 +47,7 @@ onMounted(load)
 </script>
 <template>
  <section class="space-y-5 py-5">
+  <link v-if="selectedFontsHref" rel="stylesheet" :href="selectedFontsHref"/>
   <div class="flex flex-wrap justify-between items-start gap-3">
    <div><h2 class="text-2xl font-semibold">Sign Template Manager</h2><p class="text-sm text-[#536273] mt-2">Create official templates, edit typography and layout, review submissions, duplicate and publish.</p></div>
    <button type="button" class="btn" @click="createOpen=true">+ Create Template</button>
@@ -99,7 +102,7 @@ onMounted(load)
       <div v-for="f in fields" :key="f.key" class="rounded-lg border border-[#D6B077] p-3 space-y-2">
        <strong class="text-sm">{{f.label}}</strong>
        <div class="grid grid-cols-2 gap-2">
-        <label class="text-xs">Font<input v-model="editing.config.typography[f.key].font" class="input w-full mt-1" placeholder="Georgia, serif"/></label>
+        <div class="text-xs min-w-0"><span>Font</span><SignFontPicker v-model="editing.config.typography[f.key].font" :event-category="editing.category" :label="f.label+' font'"/></div>
         <label class="text-xs">Size<input v-model.number="editing.config.typography[f.key].size" type="number" min="8" max="110" class="input w-full mt-1"/></label>
         <label class="text-xs">Colour<input v-model="editing.config.typography[f.key].colour" type="color" class="block mt-1 h-9 w-full"/></label>
         <div class="flex gap-4 items-end"><label class="text-xs"><input v-model="editing.config.typography[f.key].bold" type="checkbox"/> Bold</label><label class="text-xs"><input v-model="editing.config.typography[f.key].italic" type="checkbox"/> Italic</label></div>
