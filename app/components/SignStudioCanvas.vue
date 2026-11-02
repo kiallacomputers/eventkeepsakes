@@ -7,6 +7,44 @@ const props=withDefaults(defineProps<{
 }>(),{eventName:'Daniel & Hannah',eventDate:'15 MAY 2026',editable:false,sample:false})
 const emit=defineEmits<{(e:'select',key:SignKey):void}>()
 const keys:SignKey[]=['heading','event','date','message','qr','action']
+const canvasEl=ref<HTMLElement|null>(null)
+const zoneEls=ref<Record<string,HTMLElement>>({})
+const fittedSizes=ref<Record<string,number>>({})
+const smartAreas=computed<Record<string,any>>(()=>props.config?.smartAreas||{})
+const hasSmartAreas=computed(()=>Object.keys(smartAreas.value).some(k=>keys.includes(k as SignKey)))
+const zone=(key:SignKey)=>smartAreas.value[key]
+function setZoneEl(key:string,el:any){if(el)zoneEls.value[key]=el as HTMLElement;else delete zoneEls.value[key]}
+function zoneStyle(key:SignKey){const a=zone(key);if(!a)return {display:'none'};return {
+ left:`${a.x}%`,top:`${a.y}%`,width:`${a.w}%`,height:`${a.h}%`,
+ display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center' as const
+}}
+function fitText(){
+ if(!hasSmartAreas.value)return
+ const next:Record<string,number>={}
+ for(const key of keys){if(key==='qr'||!zone(key))continue
+  const el=zoneEls.value[key];if(!el)continue
+  const style=props.config?.typography?.[key]||{}
+  const min=Math.max(7,Math.min(60,Number(zone(key).minFont||10)))
+  const max=Math.max(min,Math.min(130,Number(zone(key).maxFont||style.size||48)))
+  const target=el.querySelector('.ek-fit-text') as HTMLElement|null
+  if(!target)continue
+  // Search largest font whose actual rendered glyphs fit BOTH dimensions.
+  let low=min,high=max,best=min
+  for(let i=0;i<12;i++){
+   const mid=(low+high)/2
+   target.style.fontSize=`${mid/100*el.clientWidth}px`
+   const fits=target.scrollWidth<=el.clientWidth-2&&target.scrollHeight<=el.clientHeight-2
+   if(fits){best=mid;low=mid}else high=mid
+  }
+  next[key]=best/100*el.clientWidth
+ }
+ fittedSizes.value=next
+}
+let observer:ResizeObserver|undefined
+onMounted(()=>{if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>fitText());if(canvasEl.value)observer.observe(canvasEl.value)}nextTick(fitText);if(typeof document!=='undefined')document.fonts?.ready.then(fitText)})
+onBeforeUnmount(()=>observer?.disconnect())
+watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.eventName,props.eventDate],()=>nextTick(fitText),{deep:true})
+
 const order=computed(()=>{const a=Array.isArray(props.config?.contentOrder)?props.config.contentOrder:keys;return [...new Set([...a.filter((k:any)=>keys.includes(k)),...keys])] as SignKey[]})
 const qrImage=ref('')
 watch(()=>[props.qrUrl,props.sample,props.config?.qrColourMode],async()=>{
@@ -36,10 +74,21 @@ function textStyle(key:SignKey){
 function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 </script>
 <template>
- <div class="ek-shared-sign" :style="{backgroundColor:config?.paletteBackground||'#FFF9ED'}" aria-label="Welcome sign">
+ <div ref="canvasEl" class="ek-shared-sign" :style="{backgroundColor:config?.paletteBackground||'#FFF9ED'}" aria-label="Welcome sign">
   <link v-if="fontLink" rel="stylesheet" :href="fontLink"/>
   <img v-if="backgroundUrl" :src="backgroundUrl" class="ek-shared-background" alt="" aria-hidden="true"/>
-  <div class="ek-shared-content">
+  <div v-if="hasSmartAreas" class="ek-smart-stage">
+   <template v-for="key in keys" :key="key">
+    <div v-if="zone(key)&& (key!=='date'||config?.showDate!==false)" :ref="(el)=>setZoneEl(key,el)" class="ek-smart-zone" :style="zoneStyle(key)">
+     <template v-if="key==='qr'">
+      <img v-if="qrImage" class="ek-smart-qr" :src="qrImage" alt="QR code for event uploads"/>
+      <span v-else class="ek-shared-qr-pending">QR loading</span>
+     </template>
+     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]||12)+'px',transform:'none',width:'100%',maxHeight:'100%',overflow:'hidden'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
+    </div>
+   </template>
+  </div>
+  <div v-else class="ek-shared-content">
    <template v-for="key in order" :key="key">
     <div v-if="key==='qr'" class="ek-shared-qr" :style="{width:`${Math.max(25,Math.min(70,Number(config?.qrSize||52)))}%`}">
      <img v-if="qrImage" :src="qrImage" alt="QR code for event uploads"/>
@@ -64,6 +113,10 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 .ek-shared-editable:focus-visible{outline:2px solid #B18A50}
 .ek-shared-qr{flex-shrink:1;max-width:100%;min-height:0;display:flex;justify-content:center;align-items:center;aspect-ratio:1/1}
 .ek-shared-qr img{width:100%;height:100%;object-fit:contain}
+.ek-smart-stage{position:absolute;inset:0;z-index:2;pointer-events:none}
+.ek-smart-zone{position:absolute;box-sizing:border-box;pointer-events:auto;overflow:hidden}
+.ek-fit-text{white-space:pre-line;overflow-wrap:anywhere;line-height:1.12;box-sizing:border-box}
+.ek-smart-qr{display:block;max-width:100%;max-height:100%;width:auto;height:auto;aspect-ratio:1;object-fit:contain;background:#fff;padding:3%;box-sizing:border-box}
 .ek-shared-qr-pending{background:#fff;padding:10px;color:#333;font-size:12px}
 @media print {.ek-shared-sign,.ek-shared-sign *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}
 </style>

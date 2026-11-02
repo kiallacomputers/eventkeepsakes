@@ -21,6 +21,19 @@ const defaultConfig=()=>({
  }})
 const selectedFontFamilies=computed(()=>editing.value?Object.values(editing.value.config?.typography||{}).map((v:any)=>String(v.font||'')).filter(f=>f.startsWith("'")).map(f=>f.split("'")[1]):[])
 const selectedFontsHref=computed(()=>selectedFontFamilies.value.length?'https://fonts.googleapis.com/css2?'+[...new Set(selectedFontFamilies.value)].map(f=>'family='+encodeURIComponent(f).replace(/%20/g,'+')).join('&')+'&display=swap':'')
+const areaKeys=['heading','event','date','message','qr','action'] as const
+const areaNames:Record<string,string>={heading:'Welcome heading',event:'Event names',date:'Event date',message:'Guest message',qr:'QR code',action:'QR instructions'}
+const activeArea=ref<string>('event')
+const drawing=ref<{x:number;y:number}|null>(null)
+const areaCanvas=ref<HTMLElement|null>(null)
+const smartDefaults:Record<string,any>={
+ heading:{x:14,y:17,w:72,h:12},event:{x:12,y:30,w:76,h:18},date:{x:22,y:51,w:56,h:8},message:{x:13,y:63,w:74,h:10},qr:{x:35,y:74,w:30,h:18},action:{x:20,y:93,w:60,h:4}}
+function initialiseAreas(){if(!editing.value)return;editing.value.config.smartAreas=JSON.parse(JSON.stringify(smartDefaults))}
+function point(e:PointerEvent){const r=areaCanvas.value!.getBoundingClientRect();return {x:Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100))}}
+function startArea(e:PointerEvent){if(!editing.value||!areaCanvas.value)return;const p=point(e);drawing.value=p;areaCanvas.value.setPointerCapture(e.pointerId);editing.value.config.smartAreas??={};editing.value.config.smartAreas[activeArea.value]={...p,w:1,h:1,...(activeArea.value==='qr'?{}:{minFont:10,maxFont:editing.value.config.typography?.[activeArea.value]?.size||48})}}
+function moveArea(e:PointerEvent){if(!drawing.value||!editing.value)return;const p=point(e),a=drawing.value;editing.value.config.smartAreas[activeArea.value]={...editing.value.config.smartAreas[activeArea.value],x:Math.min(a.x,p.x),y:Math.min(a.y,p.y),w:Math.max(1,Math.abs(p.x-a.x)),h:Math.max(1,Math.abs(p.y-a.y))}}
+function finishArea(){drawing.value=null}
+function clearArea(){if(editing.value?.config.smartAreas)delete editing.value.config.smartAreas[activeArea.value]}
 const fields=[{key:'heading',label:'Welcome heading'},{key:'event',label:'Event title / names'},{key:'date',label:'Event date'},{key:'message',label:'Guest message'},{key:'action',label:'QR instructions'}]
 async function headers(){const {data:{session}}=await client.auth.getSession();if(!session)throw new Error('Sign in required');return {authorization:`Bearer ${session.access_token}`}}
 function errText(e:any){return e?.data?.statusMessage||e?.message||'Request failed'}
@@ -127,8 +140,31 @@ onMounted(load)
      </div>
      <div class="lg:sticky lg:top-3 self-start">
       <p class="text-sm font-semibold mb-2">Live template preview (sample event details)</p>
+      <div class="mb-3 rounded-lg border border-[#D6B077] p-3 space-y-3">
+       <h4 class="font-semibold">Smart Content Areas</h4>
+       <p class="text-xs text-[#536273]">Select a field, then drag a rectangle on the preview to define its available space. Text auto-fits inside its rectangle; the QR stays square.</p>
+       <div class="flex flex-wrap gap-2">
+        <button v-for="key in areaKeys" :key="key" type="button" class="rounded border px-2 py-1 text-xs" :class="activeArea===key?'bg-[#0C1D2D] text-white':'bg-white'" @click="activeArea=key">{{areaNames[key]}}</button>
+       </div>
+       <div class="flex gap-2 flex-wrap">
+        <button type="button" class="btn" @click="initialiseAreas">Set suggested areas</button>
+        <button type="button" class="btn" @click="clearArea">Clear selected area</button>
+       </div>
+       <div v-if="editing.config.smartAreas?.[activeArea]" class="grid grid-cols-2 gap-2 text-xs">
+        <label v-for="axis in ['x','y','w','h']" :key="axis">{{axis.toUpperCase()}} %<input v-model.number="editing.config.smartAreas[activeArea][axis]" type="number" min="0" max="100" step="0.5" class="input w-full mt-1"/></label>
+        <template v-if="activeArea!=='qr'">
+         <label>Minimum font<input v-model.number="editing.config.smartAreas[activeArea].minFont" type="number" min="7" max="60" class="input w-full mt-1"/></label>
+         <label>Maximum font<input v-model.number="editing.config.smartAreas[activeArea].maxFont" type="number" min="10" max="130" class="input w-full mt-1"/></label>
+        </template>
+       </div>
+      </div>
       <div class="mx-auto w-full max-w-[390px]">
-       <SignStudioCanvas :config="editing.config" :background-url="editing.background_url" event-name="Daniel & Hannah" event-date="15 MAY 2026" sample/>
+       <div class="relative">
+        <SignStudioCanvas :config="editing.config" :background-url="editing.background_url" event-name="Daniel & Hannah" event-date="15 MAY 2026" sample/>
+        <div ref="areaCanvas" class="absolute inset-0 z-10 cursor-crosshair touch-none" @pointerdown="startArea" @pointermove="moveArea" @pointerup="finishArea" @pointercancel="finishArea">
+         <div v-for="(area,key) in editing.config.smartAreas||{}" :key="key" class="absolute border-2 border-dashed pointer-events-none" :class="activeArea===key?'border-blue-600 bg-blue-400/15':'border-emerald-500/70'" :style="{left:area.x+'%',top:area.y+'%',width:area.w+'%',height:area.h+'%'}"><span class="bg-white/90 text-[10px] text-[#0C1D2D] px-1">{{areaNames[key]||key}}</span></div>
+        </div>
+       </div>
       </div>
       <p class="text-xs text-[#536273] mt-2">This uses the same rendering component as the customer sign. The sample QR is scannable but points to an example URL.</p>
      </div>
