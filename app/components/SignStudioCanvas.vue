@@ -18,39 +18,73 @@ function zoneStyle(key:SignKey){const a=zone(key);if(!a)return {display:'none'};
  left:`${a.x}%`,top:`${a.y}%`,width:`${a.w}%`,height:`${a.h}%`,
  display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center' as const
 }}
+// Font sizes are A4 reference pixels (794px wide at 96dpi).
+// Convert to the current preview width exactly once. The old 0.24cqw
+// conversion was over-scaling the requested size and then shrinking it
+// to a few pixels when the fitting loop measured overflow.
+const A4_REFERENCE_WIDTH=794
+const canvasWidth=ref(794)
+const pxFromReference=(size:number)=>size*canvasWidth.value/A4_REFERENCE_WIDTH
+function requestedSize(key:SignKey){
+ const raw=Number(props.config?.typography?.[key]?.size)
+ return Math.max(6,Math.min(130,Number.isFinite(raw)&&raw>0?raw:16))
+}
 function fitText(){
- if(!hasSmartAreas.value)return
+ const canvas=canvasEl.value
+ if(!canvas||!hasSmartAreas.value)return
+ canvasWidth.value=canvas.getBoundingClientRect().width||794
  const next:Record<string,number>={}
- for(const key of keys){if(key==='qr'||!zone(key))continue
-  const el=zoneEls.value[key];if(!el)continue
-  const style=props.config?.typography?.[key]||{}
-  // Font sizes in the editor are document units: 1 unit = 0.24% of the
-  // full sign width. Do not use zone width here, or a 48-unit font becomes
-  // twice as large in a narrow content area.
-  const canvasWidth=canvasEl.value?.clientWidth||el.clientWidth
-  const toPx=(units:number)=>units*0.0024*canvasWidth
-  const requested=Math.max(6,Math.min(110,Number(style.size)||16))
-  const maxAllowed=Math.max(6,Math.min(130,Number(zone(key).maxFont)||110))
-  const requestedPx=toPx(Math.min(requested,maxAllowed))
-  const target=el.querySelector('.ek-fit-text') as HTMLElement|null
-  if(!target)continue
-  // Begin at the requested size. Only shrink when text would overflow.
-  // Measure the actual font and line wrapping, rather than character count.
-  let low=toPx(5),high=requestedPx,best=low
-  for(let i=0;i<14;i++){
-   const mid=(low+high)/2
-   target.style.fontSize=`${mid}px`
-   const fits=target.scrollWidth<=el.clientWidth-2&&target.scrollHeight<=el.clientHeight-2
-   if(fits){best=mid;low=mid}else high=mid
+ for(const key of keys){
+  if(key==='qr'||!zone(key))continue
+  const el=zoneEls.value[key]
+  const target=el?.querySelector('.ek-fit-text') as HTMLElement|null
+  if(!el||!target)continue
+  const area=zone(key)
+  const requested=requestedSize(key)
+  // The administrator's maximum is a safety cap, not a replacement for
+  // the requested size. A higher owner selection still triggers a refit.
+  const configuredMax=Number(area?.maxFont)
+  const maxReference=Number.isFinite(configuredMax)&&configuredMax>0
+   ?Math.max(6,Math.min(130,configuredMax)):130
+  const upper=pxFromReference(Math.min(requested,maxReference))
+  const lower=pxFromReference(6)
+  const width=el.clientWidth
+  const height=el.clientHeight
+  if(width<2||height<2){next[key]=upper;continue}
+  // Measure unconstrained content: max-height/overflow on the visible
+  // element can mask its real height and falsely force the smallest font.
+  const measure=target.cloneNode(true) as HTMLElement
+  measure.removeAttribute('role')
+  measure.removeAttribute('tabindex')
+  Object.assign(measure.style,{
+   position:'absolute',visibility:'hidden',pointerEvents:'none',
+   left:'0',top:'0',width:`${width}px`,maxWidth:`${width}px`,
+   height:'auto',maxHeight:'none',minHeight:'0',overflow:'visible',
+   transform:'none',boxSizing:'border-box',margin:'0',padding:'0'
+  })
+  canvas.appendChild(measure)
+  const fits=(size:number)=>{
+   measure.style.fontSize=`${size}px`
+   return measure.scrollHeight<=height+1&&measure.scrollWidth<=width+1
   }
-  next[key]=Math.min(requestedPx,best)
+  try{
+   if(fits(upper)){next[key]=upper;continue}
+   let low=lower,high=upper
+   if(!fits(low)){next[key]=low;continue}
+   for(let i=0;i<16;i++){
+    const mid=(low+high)/2
+    if(fits(mid))low=mid
+    else high=mid
+   }
+   next[key]=low
+  }finally{measure.remove()}
  }
  fittedSizes.value=next
 }
 let observer:ResizeObserver|undefined
 onMounted(()=>{if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>fitText());if(canvasEl.value)observer.observe(canvasEl.value)}nextTick(fitText);if(typeof document!=='undefined')document.fonts?.ready.then(fitText)})
 onBeforeUnmount(()=>observer?.disconnect())
-watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.eventName,props.eventDate],()=>nextTick(fitText),{deep:true})
+watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.eventName,props.eventDate],()=>nextTick(fitText),{deep:true,flush:'post'})
 
 const order=computed(()=>{const a=Array.isArray(props.config?.contentOrder)?props.config.contentOrder:keys;return [...new Set([...a.filter((k:any)=>keys.includes(k)),...keys])] as SignKey[]})
 const qrImage=ref('')
@@ -74,7 +108,7 @@ function fieldText(key:SignKey){
 function textStyle(key:SignKey){
  const t=props.config?.typography?.[key]||{},p=props.config?.textPlacement?.[key]||{}
  const n=Number(t.size||16)
- return {fontFamily:t.font||'Georgia, serif',fontSize:`${Math.max(6,Math.min(110,n))*0.24}cqw`,color:t.color||t.colour||'#6B431D',
+ return {fontFamily:t.font||'Georgia, serif',fontSize:`${Math.max(6,Math.min(130,n))/794*100}cqw`,color:t.color||t.colour||'#6B431D',
  fontWeight:t.bold?'bold':'normal',fontStyle:t.italic?'italic':'normal',textDecoration:t.underline?'underline':'none',
  textAlign:p.align||'center',transform:`translateY(${Number(p.offset||0)*0.24}cqw)`}
 }
@@ -91,7 +125,7 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
       <img v-if="qrImage" class="ek-smart-qr" :src="qrImage" alt="QR code for event uploads"/>
       <span v-else class="ek-shared-qr-pending">QR loading</span>
      </template>
-     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??(Math.max(6,Math.min(110,Number(config?.typography?.[key]?.size)||16))*0.0024*(canvasEl?.clientWidth||400)))+'px',transform:'none',width:'100%',maxHeight:'100%',overflow:'hidden'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
+     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??pxFromReference(requestedSize(key)))+'px',transform:'none',width:'100%',maxHeight:'100%',overflow:'hidden'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
     </div>
    </template>
   </div>

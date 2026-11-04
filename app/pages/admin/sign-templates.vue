@@ -30,7 +30,7 @@ const smartDefaults:Record<string,any>={
  heading:{x:14,y:17,w:72,h:12},event:{x:12,y:30,w:76,h:18},date:{x:22,y:51,w:56,h:8},message:{x:13,y:63,w:74,h:10},qr:{x:35,y:74,w:30,h:18},action:{x:20,y:93,w:60,h:4}}
 function initialiseAreas(){if(!editing.value)return;editing.value.config.smartAreas=JSON.parse(JSON.stringify(smartDefaults))}
 function point(e:PointerEvent){const r=areaCanvas.value!.getBoundingClientRect();return {x:Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100))}}
-function startArea(e:PointerEvent){if(!editing.value||!areaCanvas.value)return;const p=point(e);drawing.value=p;areaCanvas.value.setPointerCapture(e.pointerId);editing.value.config.smartAreas??={};editing.value.config.smartAreas[activeArea.value]={...p,w:1,h:1,...(activeArea.value==='qr'?{}:{minFont:10,maxFont:editing.value.config.typography?.[activeArea.value]?.size||48})}}
+function startArea(e:PointerEvent){if(!editing.value||!areaCanvas.value)return;const p=point(e);drawing.value=p;areaCanvas.value.setPointerCapture(e.pointerId);editing.value.config.smartAreas??={};editing.value.config.smartAreas[activeArea.value]={...p,w:1,h:1,...(activeArea.value==='qr'?{}:{minFont:10,maxFont:130})}}
 function moveArea(e:PointerEvent){if(!drawing.value||!editing.value)return;const p=point(e),a=drawing.value;editing.value.config.smartAreas[activeArea.value]={...editing.value.config.smartAreas[activeArea.value],x:Math.min(a.x,p.x),y:Math.min(a.y,p.y),w:Math.max(1,Math.abs(p.x-a.x)),h:Math.max(1,Math.abs(p.y-a.y))}}
 function finishArea(){drawing.value=null}
 function clearArea(){if(editing.value?.config.smartAreas)delete editing.value.config.smartAreas[activeArea.value]}
