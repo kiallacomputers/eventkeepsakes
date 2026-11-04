@@ -24,19 +24,26 @@ function fitText(){
  for(const key of keys){if(key==='qr'||!zone(key))continue
   const el=zoneEls.value[key];if(!el)continue
   const style=props.config?.typography?.[key]||{}
-  const min=Math.max(7,Math.min(60,Number(zone(key).minFont||10)))
-  const max=Math.max(min,Math.min(130,Number(zone(key).maxFont||style.size||48)))
+  // Font sizes in the editor are document units: 1 unit = 0.24% of the
+  // full sign width. Do not use zone width here, or a 48-unit font becomes
+  // twice as large in a narrow content area.
+  const canvasWidth=canvasEl.value?.clientWidth||el.clientWidth
+  const toPx=(units:number)=>units*0.0024*canvasWidth
+  const requested=Math.max(6,Math.min(110,Number(style.size)||16))
+  const maxAllowed=Math.max(6,Math.min(130,Number(zone(key).maxFont)||110))
+  const requestedPx=toPx(Math.min(requested,maxAllowed))
   const target=el.querySelector('.ek-fit-text') as HTMLElement|null
   if(!target)continue
-  // Search largest font whose actual rendered glyphs fit BOTH dimensions.
-  let low=min,high=max,best=min
-  for(let i=0;i<12;i++){
+  // Begin at the requested size. Only shrink when text would overflow.
+  // Measure the actual font and line wrapping, rather than character count.
+  let low=toPx(5),high=requestedPx,best=low
+  for(let i=0;i<14;i++){
    const mid=(low+high)/2
-   target.style.fontSize=`${mid/100*el.clientWidth}px`
+   target.style.fontSize=`${mid}px`
    const fits=target.scrollWidth<=el.clientWidth-2&&target.scrollHeight<=el.clientHeight-2
    if(fits){best=mid;low=mid}else high=mid
   }
-  next[key]=best/100*el.clientWidth
+  next[key]=Math.min(requestedPx,best)
  }
  fittedSizes.value=next
 }
@@ -84,7 +91,7 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
       <img v-if="qrImage" class="ek-smart-qr" :src="qrImage" alt="QR code for event uploads"/>
       <span v-else class="ek-shared-qr-pending">QR loading</span>
      </template>
-     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]||12)+'px',transform:'none',width:'100%',maxHeight:'100%',overflow:'hidden'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
+     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??(Math.max(6,Math.min(110,Number(config?.typography?.[key]?.size)||16))*0.0024*(canvasEl?.clientWidth||400)))+'px',transform:'none',width:'100%',maxHeight:'100%',overflow:'hidden'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
     </div>
    </template>
   </div>
