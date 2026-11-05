@@ -39,14 +39,14 @@ function fitText(){
   const el=zoneEls.value[key]
   const target=el?.querySelector('.ek-fit-text') as HTMLElement|null
   if(!el||!target)continue
-  const area=zone(key)
   const requested=requestedSize(key)
   // The administrator's maximum is a safety cap, not a replacement for
   // the requested size. A higher owner selection still triggers a refit.
-  const configuredMax=Number(area?.maxFont)
-  const maxReference=Number.isFinite(configuredMax)&&configuredMax>0
-   ?Math.max(6,Math.min(130,configuredMax)):130
-  const upper=pxFromReference(Math.min(requested,maxReference))
+  // Older templates saved maxFont equal to the default font size.
+  // Do not interpret that legacy value as a cap on owner personalisation.
+  // The physical smart-area rectangle is the actual safety constraint:
+  // the fit measurement below shrinks text only when it would overflow.
+  const upper=pxFromReference(requested)
   const lower=pxFromReference(6)
   const width=el.clientWidth
   const height=el.clientHeight
@@ -84,7 +84,11 @@ function fitText(){
 let observer:ResizeObserver|undefined
 onMounted(()=>{if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>fitText());if(canvasEl.value)observer.observe(canvasEl.value)}nextTick(fitText);if(typeof document!=='undefined')document.fonts?.ready.then(fitText)})
 onBeforeUnmount(()=>observer?.disconnect())
-watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.eventName,props.eventDate],()=>nextTick(fitText),{deep:true,flush:'post'})
+watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.eventName,props.eventDate],async()=>{
+ await nextTick()
+ fitText()
+ if(typeof document!=='undefined')document.fonts?.ready.then(fitText)
+},{deep:true,flush:'post'})
 
 const order=computed(()=>{const a=Array.isArray(props.config?.contentOrder)?props.config.contentOrder:keys;return [...new Set([...a.filter((k:any)=>keys.includes(k)),...keys])] as SignKey[]})
 const qrImage=ref('')
@@ -125,7 +129,7 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
       <img v-if="qrImage" class="ek-smart-qr" :src="qrImage" alt="QR code for event uploads"/>
       <span v-else class="ek-shared-qr-pending">QR loading</span>
      </template>
-     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??pxFromReference(requestedSize(key)))+'px',transform:'none',width:'100%',maxHeight:'100%',overflow:'hidden'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
+     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??pxFromReference(requestedSize(key)))+'px',transform:'none',width:'100%',overflow:'visible'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
     </div>
    </template>
   </div>
@@ -155,8 +159,11 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 .ek-shared-qr{flex-shrink:1;max-width:100%;min-height:0;display:flex;justify-content:center;align-items:center;aspect-ratio:1/1}
 .ek-shared-qr img{width:100%;height:100%;object-fit:contain}
 .ek-smart-stage{position:absolute;inset:0;z-index:2;pointer-events:none}
-.ek-smart-zone{position:absolute;box-sizing:border-box;pointer-events:auto;overflow:hidden}
-.ek-fit-text{white-space:pre-line;overflow-wrap:anywhere;line-height:1.12;box-sizing:border-box}
+.ek-smart-zone{position:absolute;box-sizing:border-box;pointer-events:auto;overflow:visible}
+/* Script fonts can paint outside their nominal glyph box. Reserve vertical
+   breathing room in the actual measured element, rather than clipping it. */
+.ek-fit-text{white-space:pre-line;overflow-wrap:anywhere;line-height:1.4;box-sizing:border-box;padding:.22em .12em;overflow:visible;min-width:0}
+
 .ek-smart-qr{display:block;max-width:100%;max-height:100%;width:auto;height:auto;aspect-ratio:1;object-fit:contain;background:#fff;padding:3%;box-sizing:border-box}
 .ek-shared-qr-pending{background:#fff;padding:10px;color:#333;font-size:12px}
 @media print {.ek-shared-sign,.ek-shared-sign *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}
