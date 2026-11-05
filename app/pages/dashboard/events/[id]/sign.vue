@@ -168,7 +168,7 @@ const textPlacement=reactive<Record<string,{offset:number,align:'left'|'center'|
 function textPlacementStyle(key:string){const p=textPlacement[key];return p?{transform:`translateY(${p.offset}px)`,textAlign:p.align,alignSelf:p.align==='left'?'flex-start':p.align==='right'?'flex-end':'center'}:{}}
 function restoreTextPlacement(raw:any){for(const k of Object.keys(textPlacement)){const p=raw?.[k];textPlacement[k].offset=Number.isFinite(Number(p?.offset))?Math.max(-100,Math.min(100,Number(p.offset))):0;textPlacement[k].align=['left','center','right'].includes(p?.align)?p.align:'center'}}
 const selectedTypography=ref<TextKey>('event')
-const studioTab=ref<StudioStep|'photo'|'colours'|'style'|'qr'>('category')
+const studioTab=ref<StudioStep|'photo'|'colours'|'style'|'qr'|null>('category')
 const brandColour=ref('#0C1D2D')
 const brandAccent=ref('#B18A50')
 // Category-first design: each category owns three independent 3-tone palettes.
@@ -205,6 +205,7 @@ function canOpenStudioStep(step:StudioStep){
  return !selectedLayout.value?.variants?.length||!!selectedVariantId.value
 }
 function openStudioStep(step:StudioStep){if(canOpenStudioStep(step))studioTab.value=step}
+function toggleStudioStep(step:StudioStep){if(canOpenStudioStep(step))studioTab.value=studioTab.value===step?null:step}
 const canGoNext=computed(()=>{
  const i=studioSteps.findIndex(x=>x.id===studioTab.value)
  const next=studioSteps[i+1]
@@ -452,21 +453,20 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
   <p v-if="loading">Loading sign designer…</p><p v-else-if="error" class="text-red-700">{{error}}</p>
   <div v-else-if="item" class="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
    <section class="panel space-y-5 ek-no-print self-start">
-    <nav class="flex flex-col gap-2" aria-label="Sign design steps">
-     <button v-for="(step,i) in studioSteps" :key="step.id" type="button"
+    <div class="flex flex-col gap-3" aria-label="Sign design steps">
+    <div class="rounded-xl border border-[#D6B077] overflow-hidden bg-white" :key="studioSteps[0].id">
+     <button type="button"
       class="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors"
-      :class="studioTab===step.id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'"
-      :disabled="!canOpenStudioStep(step.id)"
-      :aria-expanded="studioTab===step.id" :aria-controls="`ek-step-${step.id}`"
-      @click="openStudioStep(step.id)">
-      <span class="w-5 shrink-0">{{i+1}}.</span>
-      <span class="flex-1">{{step.name}}</span>
-      <span aria-hidden="true">{{studioTab===step.id?'▾':'▸'}}</span>
+      :class="studioTab===studioSteps[0].id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'"
+      :disabled="!canOpenStudioStep(studioSteps[0].id)"
+      :aria-expanded="studioTab===studioSteps[0].id" :aria-controls="`ek-step-${studioSteps[0].id}`"
+      @click="toggleStudioStep(studioSteps[0].id)">
+      <span class="w-5 shrink-0">1.</span>
+      <span class="flex-1">{{studioSteps[0].name}}</span>
+      <span aria-hidden="true">{{studioTab===studioSteps[0].id?'▴':'▾'}}</span>
      </button>
-    </nav>
-    <p v-if="!selectedLayoutId" class="text-xs text-[#536273]">Choose a template to unlock the remaining steps.</p>
-    <p v-else-if="selectedLayout?.variants?.length&&!selectedVariantId" class="text-xs text-[#536273]">Choose a colour variation before personalising your sign.</p>
-    <div v-if="studioTab==='category'" id="ek-step-category" class="space-y-3">
+     <div v-if="studioTab===studioSteps[0].id" class="p-3 space-y-3" id="ek-step-category">
+    <div class="space-y-3">
       <h2 class="text-lg font-semibold">Choose an official template</h2>
       <p class="text-sm text-[#536273]">Choose a published design. The layout, background, artwork and QR position are set by the administrator.</p>
       <button class="btn" type="button" @click="refreshLayouts">Refresh templates</button>
@@ -482,7 +482,23 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
       </div>
       <p v-if="!layoutLibrary.some(t=>t.status==='published')" class="text-sm">No published templates available yet.</p>
     </div>
-    <div v-if="studioTab==='variation'" id="ek-step-variation" class="space-y-3">
+
+      <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="!canGoNext" @click="nextStudioStep">Next step →</button>
+     </div>
+    </div>
+    <div class="rounded-xl border border-[#D6B077] overflow-hidden bg-white" :key="studioSteps[1].id">
+     <button type="button"
+      class="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors"
+      :class="studioTab===studioSteps[1].id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'"
+      :disabled="!canOpenStudioStep(studioSteps[1].id)"
+      :aria-expanded="studioTab===studioSteps[1].id" :aria-controls="`ek-step-${studioSteps[1].id}`"
+      @click="toggleStudioStep(studioSteps[1].id)">
+      <span class="w-5 shrink-0">2.</span>
+      <span class="flex-1">{{studioSteps[1].name}}</span>
+      <span aria-hidden="true">{{studioTab===studioSteps[1].id?'▴':'▾'}}</span>
+     </button>
+     <div v-if="studioTab===studioSteps[1].id" class="p-3 space-y-3" id="ek-step-variation">
+    <div class="space-y-3">
       <h2 class="text-lg font-semibold">Choose a colour variation</h2>
       <p class="text-sm text-[#536273]">Select the colour scheme before personalising your sign.</p>
       <div v-if="selectedLayout?.variants?.length" class="grid grid-cols-2 gap-3">
@@ -502,7 +518,23 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
        <p class="text-xs text-[#536273]">Continue to Personalise to use this design.</p>
       </div>
     </div>
-    <div v-if="studioTab==='text'" id="ek-step-text" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
+
+      <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="!canGoNext" @click="nextStudioStep">Next step →</button>
+     </div>
+    </div>
+    <div class="rounded-xl border border-[#D6B077] overflow-hidden bg-white" :key="studioSteps[2].id">
+     <button type="button"
+      class="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors"
+      :class="studioTab===studioSteps[2].id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'"
+      :disabled="!canOpenStudioStep(studioSteps[2].id)"
+      :aria-expanded="studioTab===studioSteps[2].id" :aria-controls="`ek-step-${studioSteps[2].id}`"
+      @click="toggleStudioStep(studioSteps[2].id)">
+      <span class="w-5 shrink-0">3.</span>
+      <span class="flex-1">{{studioSteps[2].name}}</span>
+      <span aria-hidden="true">{{studioTab===studioSteps[2].id?'▴':'▾'}}</span>
+     </button>
+     <div v-if="studioTab===studioSteps[2].id" class="p-3 space-y-3" id="ek-step-text">
+    <div class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
     <label class="block text-sm font-medium">Message<textarea v-model="message" maxlength="260" rows="4" class="input mt-2" /></label>
 
@@ -547,12 +579,32 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      </div>
      <p class="text-xs text-[#536273]">You can personalise text, fonts, sizes and colours. The administrator controls the artwork and layout.</p>
     </div>
-    </div><div v-if="studioTab==='saved'" id="ek-step-saved" class="space-y-4"><h2 class="text-lg font-semibold">Save & load designs</h2>
+    </div>
+
+      <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="!canGoNext" @click="nextStudioStep">Next step →</button>
+     </div>
+    </div>
+    <div class="rounded-xl border border-[#D6B077] overflow-hidden bg-white" :key="studioSteps[3].id">
+     <button type="button"
+      class="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors"
+      :class="studioTab===studioSteps[3].id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'"
+      :disabled="!canOpenStudioStep(studioSteps[3].id)"
+      :aria-expanded="studioTab===studioSteps[3].id" :aria-controls="`ek-step-${studioSteps[3].id}`"
+      @click="toggleStudioStep(studioSteps[3].id)">
+      <span class="w-5 shrink-0">4.</span>
+      <span class="flex-1">{{studioSteps[3].name}}</span>
+      <span aria-hidden="true">{{studioTab===studioSteps[3].id?'▴':'▾'}}</span>
+     </button>
+     <div v-if="studioTab===studioSteps[3].id" class="p-3 space-y-3" id="ek-step-saved">
+    <div class="space-y-4"><h2 class="text-lg font-semibold">Save & load designs</h2>
     <label class="block text-sm">Design name<input v-model="posterName" maxlength="80" class="input mt-2" /></label>
     <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy||!canOpenStudioStep('saved')" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
     <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
     </div>
-    <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="!canGoNext" @click="nextStudioStep">Next step →</button>
+
+     </div>
+    </div>
+    </div>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
