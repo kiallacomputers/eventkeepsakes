@@ -168,7 +168,7 @@ const textPlacement=reactive<Record<string,{offset:number,align:'left'|'center'|
 function textPlacementStyle(key:string){const p=textPlacement[key];return p?{transform:`translateY(${p.offset}px)`,textAlign:p.align,alignSelf:p.align==='left'?'flex-start':p.align==='right'?'flex-end':'center'}:{}}
 function restoreTextPlacement(raw:any){for(const k of Object.keys(textPlacement)){const p=raw?.[k];textPlacement[k].offset=Number.isFinite(Number(p?.offset))?Math.max(-100,Math.min(100,Number(p.offset))):0;textPlacement[k].align=['left','center','right'].includes(p?.align)?p.align:'center'}}
 const selectedTypography=ref<TextKey>('event')
-const studioTab=ref<'category'|'photo'|'colours'|'text'|'style'|'qr'|'saved'>('category')
+const studioTab=ref<StudioStep|'photo'|'colours'|'style'|'qr'>('category')
 const brandColour=ref('#0C1D2D')
 const brandAccent=ref('#B18A50')
 // Category-first design: each category owns three independent 3-tone palettes.
@@ -191,11 +191,29 @@ const currentPalette=computed(()=>currentCategory.value.palettes[Math.min(palett
 const paletteBackground=ref('#FFF9ED')
 function choosePalette(index:number){paletteIndex.value=index;const p=currentPalette.value;paletteBackground.value=p[1];brandAccent.value=p[2];brandColour.value=p[3];for(const k of ['event','heading','message','action'] as const)typography[k].color=p[3];for(const k of ['date','footer'] as const)typography[k].color=p[2]}
 function chooseCategory(id:string){categoryId.value=id;choosePalette(0);studioTab.value='photo'}
-const studioSteps=[{id:'category',name:'Choose Template',icon:'▦'},{id:'text',name:'Personalise',icon:'T'},{id:'saved',name:'Save Sign',icon:'▤'}] as const
-function nextStudioStep(){
- if(studioTab.value==='category'&&(!selectedLayoutId.value||(selectedLayout.value?.variants?.length&&!selectedVariantId.value)))return
+const studioSteps=[
+ {id:'category',name:'Choose Template'},
+ {id:'variation',name:'Choose Variation'},
+ {id:'text',name:'Personalise'},
+ {id:'saved',name:'Save Sign'},
+] as const
+type StudioStep=typeof studioSteps[number]['id']
+function canOpenStudioStep(step:StudioStep){
+ if(step==='category')return true
+ if(!selectedLayoutId.value)return false
+ if(step==='variation')return true
+ return !selectedLayout.value?.variants?.length||!!selectedVariantId.value
+}
+function openStudioStep(step:StudioStep){if(canOpenStudioStep(step))studioTab.value=step}
+const canGoNext=computed(()=>{
  const i=studioSteps.findIndex(x=>x.id===studioTab.value)
- studioTab.value=studioSteps[Math.min(i+1,studioSteps.length-1)].id
+ const next=studioSteps[i+1]
+ return !!next&&canOpenStudioStep(next.id)
+})
+function nextStudioStep(){
+ const i=studioSteps.findIndex(x=>x.id===studioTab.value)
+ const next=studioSteps[i+1]
+ if(next&&canOpenStudioStep(next.id))studioTab.value=next.id
 }
 function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='text';fontBrowserOpen.value=false}
 // Decoration assets are CSS/SVG primitives rather than third-party image files.
@@ -384,12 +402,8 @@ function applyLibraryLayout(t:any){
  templateBackground.value=t.background_url||null;backgroundPath.value=t.background_path||null
  selectedLayoutId.value=t.id;backgroundTemplateId.value=t.id;layoutName.value=t.name
  selectedVariantId.value=''
- // Keep the owner on template selection until a colour is explicitly chosen.
- if(t.variants?.length){
-  studioTab.value='category'
- }else{
-  studioTab.value='text'
- }
+ // Show variation selection even for a single-colour template.
+ studioTab.value='variation'
 }
 async function submitMyLayout(){const t=selectedLayout.value;if(!t||t.status!=='personal')return
  if(!publishPermission.value){layoutError.value='Please confirm that you own or have permission to share all artwork in this layout.';return}
@@ -398,7 +412,7 @@ async function submitMyLayout(){const t=selectedLayout.value;if(!t||t.status!=='
  await refreshLayouts();dialog.show('Layout submitted for administrator review.','success')
  }catch(e:any){layoutError.value=e?.data?.statusMessage||e.message}finally{layoutBusy.value=false}}
 
-async function savePoster(){if(!selectedLayoutId.value){posterError.value='Choose an official template before saving.';return}posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,qrPosition:qrPosition.value,qrSize:qrSize.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,backgroundTemplateId:backgroundTemplateId.value,selectedVariantId:selectedVariantId.value,layers:layers.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,textPlacement:JSON.parse(JSON.stringify(textPlacement)),contentOrder:[...contentOrder.value],typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
+async function savePoster(){if(!canOpenStudioStep('saved')){posterError.value='Choose a template and colour variation before saving.';return}posterBusy.value=true;posterError.value='';try{const result=await $fetch<any>('/api/owner/posters',{method:'POST',headers:await posterAuth(),body:{eventId:String(route.params.id),name:posterName.value,config:{paper:paper.value,theme:theme.value,heading:heading.value,message:message.value,showDate:showDate.value,useCover:useCover.value,qrColourMode:qrColourMode.value,qrPosition:qrPosition.value,qrSize:qrSize.value,photoOverlay:photoOverlay.value,photoFill:photoFill.value,categoryId:categoryId.value,paletteIndex:paletteIndex.value,paletteBackground:paletteBackground.value,backgroundTemplateId:backgroundTemplateId.value,selectedVariantId:selectedVariantId.value,layers:layers.value,decoration:decoration.value,decorationOpacity:decorationOpacity.value,decorationSize:decorationSize.value,decorationRotation:decorationRotation.value,decorationPosition:decorationPosition.value,decorationColour:decorationColour.value,brandColour:brandColour.value,brandAccent:brandAccent.value,textPlacement:JSON.parse(JSON.stringify(textPlacement)),contentOrder:[...contentOrder.value],typography:JSON.parse(JSON.stringify(typography))}}});posterCover.value=result.snapshot_url;loadedSavedPoster.value=true;await loadPosterAssets();dialog.show('Poster design saved with a snapshot of its cover.','success')}catch(e:any){posterError.value=e?.data?.statusMessage||e.message}finally{posterBusy.value=false}}
 function openSavedPoster(p:any){if(!p)return;templateBackground.value=null;backgroundPath.value=null;backgroundTemplateId.value=null;selectedLayoutId.value='';const c=p.config||{};selectedVariantId.value=c.selectedVariantId||'';activeSmartAreas.value=JSON.parse(JSON.stringify(c.smartAreas||{}));if(c.backgroundTemplateId){const source=layoutLibrary.value.find(t=>t.id===c.backgroundTemplateId);if(source){const v=source.variants?.find((x:any)=>x.id===c.selectedVariantId);templateBackground.value=v?.background_url||source.background_url||null;backgroundPath.value=v?.background_path||source.background_path||null;backgroundTemplateId.value=source.id;selectedLayoutId.value=source.id}}restoreLayers(c.layers);paper.value=c.paper||'A4';theme.value=c.theme||'classic';heading.value=c.heading||'';message.value=c.message||'';showDate.value=!!c.showDate;useCover.value=!!c.useCover;qrColourMode.value=['auto','dark','light'].includes(c.qrColourMode)?c.qrColourMode:'auto';qrPosition.value=['top','middle','bottom'].includes(c.qrPosition)?c.qrPosition:'bottom';qrSize.value=Number.isFinite(Number(c.qrSize))?Math.min(70,Math.max(25,Number(c.qrSize))):52;photoFill.value=!!c.photoFill;photoOverlay.value=Number.isFinite(Number(c.photoOverlay))?Math.min(85,Math.max(0,Number(c.photoOverlay))):28;restoreTypography(c.typography);restoreTextPlacement(c.textPlacement);contentOrder.value=Array.isArray(c.contentOrder)?[...new Set([...c.contentOrder.filter((k:any)=>['heading','event','date','message','qr','action'].includes(k)),...'heading,event,date,message,qr,action'.split(',')])]:['heading','event','date','message','qr','action'];categoryId.value=categories.some(x=>x.id===c.categoryId)?c.categoryId:'wedding';paletteIndex.value=[0,1,2].includes(c.paletteIndex)?c.paletteIndex:0;paletteBackground.value=/^#[0-9a-f]{6}$/i.test(c.paletteBackground||'')?c.paletteBackground:'#FFF9ED';decoration.value=decorationNames.some(x=>x[0]===c.decoration)?c.decoration:'none';decorationOpacity.value=Math.min(100,Math.max(0,Number(c.decorationOpacity)||65));decorationSize.value=Math.min(160,Math.max(20,Number(c.decorationSize)||85));decorationRotation.value=Math.min(180,Math.max(-180,Number(c.decorationRotation)||0));decorationPosition.value=['top-left','top-right','bottom-left','bottom-right'].includes(c.decorationPosition)?c.decorationPosition:'top-left';decorationColour.value=/^#[0-9a-f]{6}$/i.test(c.decorationColour||'')?c.decorationColour:'#B18A50';brandColour.value=/^#[0-9a-f]{6}$/i.test(c.brandColour||'')?c.brandColour:'#0C1D2D';brandAccent.value=/^#[0-9a-f]{6}$/i.test(c.brandAccent||'')?c.brandAccent:'#B18A50';posterCover.value=p.snapshot_url;loadedSavedPoster.value=true;posterName.value=p.name}
 const loadedSavedPoster=ref(false)
 const activePosterCover=computed(()=>useCover.value?(loadedSavedPoster.value?posterCover.value:coverUrl.value):null)
@@ -434,10 +448,21 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
   <p v-if="loading">Loading sign designer…</p><p v-else-if="error" class="text-red-700">{{error}}</p>
   <div v-else-if="item" class="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
    <section class="panel space-y-5 ek-no-print self-start">
-    <nav class="grid grid-cols-2 gap-2" aria-label="Sign design steps">
-     <button v-for="(step,i) in studioSteps" :key="step.id" type="button" class="flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm font-medium" :class="studioTab===step.id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'" @click="studioTab=step.id"><span class="opacity-70">{{i+1}}.</span><span>{{step.name}}</span></button>
+    <nav class="flex flex-col gap-2" aria-label="Sign design steps">
+     <button v-for="(step,i) in studioSteps" :key="step.id" type="button"
+      class="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-semibold transition-colors"
+      :class="studioTab===step.id?'bg-[#0C1D2D] text-white border-[#0C1D2D]':'bg-white text-[#0C1D2D] border-[#D6B077]'"
+      :disabled="!canOpenStudioStep(step.id)"
+      :aria-expanded="studioTab===step.id" :aria-controls="`ek-step-${step.id}`"
+      @click="openStudioStep(step.id)">
+      <span class="w-5 shrink-0">{{i+1}}.</span>
+      <span class="flex-1">{{step.name}}</span>
+      <span aria-hidden="true">{{studioTab===step.id?'▾':'▸'}}</span>
+     </button>
     </nav>
-    <div v-if="studioTab==='category'" class="space-y-3">
+    <p v-if="!selectedLayoutId" class="text-xs text-[#536273]">Choose a template to unlock the remaining steps.</p>
+    <p v-else-if="selectedLayout?.variants?.length&&!selectedVariantId" class="text-xs text-[#536273]">Choose a colour variation before personalising your sign.</p>
+    <div v-if="studioTab==='category'" id="ek-step-category" class="space-y-3">
       <h2 class="text-lg font-semibold">Choose an official template</h2>
       <p class="text-sm text-[#536273]">Choose a published design. The layout, background, artwork and QR position are set by the administrator.</p>
       <button class="btn" type="button" @click="refreshLayouts">Refresh templates</button>
@@ -451,18 +476,29 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
         <span v-if="t.variants?.length" class="block text-xs text-[#536273]">{{t.variants.length}} colour variations</span>
        </button>
       </div>
-      <div v-if="selectedLayout?.variants?.length" class="rounded-lg border p-3 space-y-2">
-       <h3 class="font-semibold text-sm">Choose a colour for {{selectedLayout.name}}</h3>
-       <div class="grid grid-cols-2 gap-2">
-        <button v-for="v in selectedLayout.variants" :key="v.id" type="button" class="rounded-lg border p-2 text-left" :class="selectedVariantId===v.id?'ring-2 ring-[#B18A50]':''" @click="selectVariant(selectedLayout,v)">
-         <img v-if="v.background_url" :src="v.background_url" :alt="v.name" class="h-28 w-full object-contain"/>
-         <span class="block text-sm mt-1">{{v.name}}</span>
-        </button>
-       </div>
-      </div>
       <p v-if="!layoutLibrary.some(t=>t.status==='published')" class="text-sm">No published templates available yet.</p>
     </div>
-    <div v-if="studioTab==='text'" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
+    <div v-if="studioTab==='variation'" id="ek-step-variation" class="space-y-3">
+      <h2 class="text-lg font-semibold">Choose a colour variation</h2>
+      <p class="text-sm text-[#536273]">Select the colour scheme before personalising your sign.</p>
+      <div v-if="selectedLayout?.variants?.length" class="grid grid-cols-2 gap-3">
+        <button v-for="v in selectedLayout.variants" :key="v.id" type="button"
+         class="rounded-lg border p-2 text-left" :class="selectedVariantId===v.id?'ring-2 ring-[#B18A50]':''"
+         :aria-pressed="selectedVariantId===v.id" @click="selectVariant(selectedLayout,v)">
+          <img v-if="v.background_url" :src="v.background_url" :alt="v.name" class="aspect-[210/297] w-full object-contain"/>
+          <div v-else class="aspect-[210/297] bg-[#FFF9ED]"/>
+          <span class="block mt-2 text-sm font-medium">{{v.name}}</span>
+        </button>
+      </div>
+      <div v-else-if="selectedLayout" class="rounded-lg border border-[#D6B077] p-3 space-y-2">
+       <p class="text-sm">This template has one default colour scheme.</p>
+       <div class="mx-auto max-w-40 aspect-[210/297] overflow-hidden">
+        <SignStudioCanvas :config="selectedLayout.config" :background-url="selectedLayout.background_url" :event-name="item.title" :event-date="dateLabel" sample/>
+       </div>
+       <p class="text-xs text-[#536273]">Continue to Personalise to use this design.</p>
+      </div>
+    </div>
+    <div v-if="studioTab==='text'" id="ek-step-text" class="space-y-4"><h2 class="text-lg font-semibold">Edit text</h2>
     <label class="block text-sm font-medium">Heading<input v-model="heading" maxlength="100" class="input mt-2" /></label>
     <label class="block text-sm font-medium">Message<textarea v-model="message" maxlength="260" rows="4" class="input mt-2" /></label>
 
@@ -507,12 +543,12 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
      </div>
      <p class="text-xs text-[#536273]">You can personalise text, fonts, sizes and colours. The administrator controls the artwork and layout.</p>
     </div>
-    </div><div v-if="studioTab==='saved'" class="space-y-4"><h2 class="text-lg font-semibold">Save & load designs</h2>
+    </div><div v-if="studioTab==='saved'" id="ek-step-saved" class="space-y-4"><h2 class="text-lg font-semibold">Save & load designs</h2>
     <label class="block text-sm">Design name<input v-model="posterName" maxlength="80" class="input mt-2" /></label>
-    <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy||!selectedLayoutId" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
+    <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy||!canOpenStudioStep('saved')" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
     <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
     </div>
-    <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="studioTab==='category'&&(!selectedLayoutId||(selectedLayout?.variants?.length&&!selectedVariantId))" @click="nextStudioStep">{{studioTab==='category'&&selectedLayout?.variants?.length&&!selectedVariantId?'Choose a colour variation first':'Next step →'}}</button>
+    <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="!canGoNext" @click="nextStudioStep">Next step →</button>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
