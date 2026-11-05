@@ -83,7 +83,7 @@ function removeVariant(id:string){if(!editing.value)return;editing.value.config.
 const activeVariant=computed(()=>variants(editing.value).find((v:any)=>v.id===activeVariantId.value))
 const previewConfig=computed(()=>{
  if(!editing.value)return {}
- const cfg=structuredClone(editing.value.config)
+ const cfg=JSON.parse(JSON.stringify(editing.value.config))
  if(activeVariant.value)for(const [key,color] of Object.entries(activeVariant.value.colors||{})){
   cfg.typography[key]??={};cfg.typography[key].color=color
  }
