@@ -192,7 +192,11 @@ const paletteBackground=ref('#FFF9ED')
 function choosePalette(index:number){paletteIndex.value=index;const p=currentPalette.value;paletteBackground.value=p[1];brandAccent.value=p[2];brandColour.value=p[3];for(const k of ['event','heading','message','action'] as const)typography[k].color=p[3];for(const k of ['date','footer'] as const)typography[k].color=p[2]}
 function chooseCategory(id:string){categoryId.value=id;choosePalette(0);studioTab.value='photo'}
 const studioSteps=[{id:'category',name:'Choose Template',icon:'▦'},{id:'text',name:'Personalise',icon:'T'},{id:'saved',name:'Save Sign',icon:'▤'}] as const
-function nextStudioStep(){const i=studioSteps.findIndex(x=>x.id===studioTab.value);studioTab.value=studioSteps[Math.min(i+1,studioSteps.length-1)].id}
+function nextStudioStep(){
+ if(studioTab.value==='category'&&(!selectedLayoutId.value||(selectedLayout.value?.variants?.length&&!selectedVariantId.value)))return
+ const i=studioSteps.findIndex(x=>x.id===studioTab.value)
+ studioTab.value=studioSteps[Math.min(i+1,studioSteps.length-1)].id
+}
 function editOnCanvas(key:TextKey){selectedTypography.value=key;studioTab.value='text';fontBrowserOpen.value=false}
 // Decoration assets are CSS/SVG primitives rather than third-party image files.
 type DecorationKind='none'|'floral'|'confetti'|'stars'|'ribbon'|'clouds'|'cross'|'geometric'|'leaves'|'hearts'
@@ -380,8 +384,12 @@ function applyLibraryLayout(t:any){
  templateBackground.value=t.background_url||null;backgroundPath.value=t.background_path||null
  selectedLayoutId.value=t.id;backgroundTemplateId.value=t.id;layoutName.value=t.name
  selectedVariantId.value=''
- if(t.variants?.length)selectVariant(t,t.variants[0])
- studioTab.value='text'
+ // Keep the owner on template selection until a colour is explicitly chosen.
+ if(t.variants?.length){
+  studioTab.value='category'
+ }else{
+  studioTab.value='text'
+ }
 }
 async function submitMyLayout(){const t=selectedLayout.value;if(!t||t.status!=='personal')return
  if(!publishPermission.value){layoutError.value='Please confirm that you own or have permission to share all artwork in this layout.';return}
@@ -504,7 +512,7 @@ async function copyLink(){try{await navigator.clipboard.writeText(guestUrl.value
     <button type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2" :disabled="posterBusy||!selectedLayoutId" @click="savePoster">{{posterBusy?'Saving…':'Save poster design'}}</button>
     <p v-if="posterError" class="text-sm text-red-700">{{posterError}}</p>
     </div>
-    <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" @click="nextStudioStep">Next step →</button>
+    <button v-if="studioTab!=='saved'" type="button" class="w-full rounded-lg border border-[#D6B077] px-4 py-2 font-semibold" :disabled="studioTab==='category'&&(!selectedLayoutId||(selectedLayout?.variants?.length&&!selectedVariantId))" @click="nextStudioStep">{{studioTab==='category'&&selectedLayout?.variants?.length&&!selectedVariantId?'Choose a colour variation first':'Next step →'}}</button>
     <button type="button" class="btn w-full" @click="printSign">Print / Save as PDF</button>
     <button type="button" class="w-full rounded-lg border border-[#CBBFAE] px-4 py-2" @click="copyLink">Copy guest link</button>
     <p class="text-xs text-[#536273]">In the print dialog, select Save as PDF, set paper size to A4 (or A5 if selected), margins to None, scale to 100%, disable headers/footers, and enable background graphics.</p>
