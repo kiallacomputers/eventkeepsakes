@@ -47,10 +47,11 @@ const contentKeys=['heading','event','date','message','qr','action']
 function orderedKeys(c:any){const stored=Array.isArray(c?.contentOrder)?c.contentOrder:contentKeys;return [...new Set([...stored.filter((x:string)=>contentKeys.includes(x)),...contentKeys])]}
 function moveContent(c:any,key:string,delta:number){const order=orderedKeys(c);const from=order.indexOf(key),to=from+delta;if(to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];c.contentOrder=order}
 function styleFor(c:any,key:string){const t=c.typography?.[key]||{};return {fontFamily:t.font||'Georgia, serif',fontSize:`${Math.max(8,Number(t.size||16)*.65)}px`,color:t.color||t.colour||'#6B431D',fontWeight:t.bold?'bold':'normal',fontStyle:t.italic?'italic':'normal',textAlign:c.textPlacement?.[key]?.align||'center'}}
-function openEditor(t:any){editing.value=JSON.parse(JSON.stringify(t));editing.value.config??=defaultConfig();editing.value.config.typography??=defaultConfig().typography;for(const f of fields){editing.value.config.typography[f.key]??=defaultConfig().typography[f.key];const font=editing.value.config.typography[f.key];font.color??=font.colour||'#6B431D';font.colour=font.color}editing.value.config.contentOrder=orderedKeys(editing.value.config)}
+function openEditor(t:any){editing.value=JSON.parse(JSON.stringify(t));editing.value.config??=defaultConfig();editing.value.config.typography??=defaultConfig().typography;for(const f of fields){editing.value.config.typography[f.key]??=defaultConfig().typography[f.key];const font=editing.value.config.typography[f.key];font.color??=font.colour||'#6B431D';font.colour=font.color}editing.value.config.contentOrder=orderedKeys(editing.value.config);editing.value.config.variants??=[];for(const v of editing.value.config.variants){v.background_url=t.variants?.find((x:any)=>x.id===v.id)?.background_url||null}activeVariantId.value=editing.value.config.variants[0]?.id||''}
 async function save(t:any){busy.value=true;error.value='';try{
  for(const font of Object.values(t.config.typography||{}) as any[]){font.color=font.color||font.colour;delete font.colour}
  t.config.contentOrder=orderedKeys(t.config)
+ for(const v of variants(t))delete v.background_url
  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
  dialog.show('Template saved.','success');await load();editing.value=null
  }catch(e:any){error.value=errText(e)}finally{busy.value=false}}
@@ -64,6 +65,45 @@ async function upload(t:any,e:Event){const input=e.target as HTMLInputElement,fi
  const id=t.id;await load();const fresh=templates.value.find(x=>x.id===id);if(fresh&&editing.value?.id===id)openEditor(fresh)
  dialog.show('Background uploaded.','success')
  }catch(e:any){error.value=errText(e)}finally{busy.value=false}input.value=''}
+const activeVariantId=ref('')
+const variantNames=['Blush Pink','Ivory & Green','Lavender','Dusty Blue','Burgundy & Cream']
+const variantTones=['#9E601F','#596B4D','#70577E','#526B82','#752E43']
+function variants(t:any){return Array.isArray(t?.config?.variants)?t.config.variants:[]}
+function addVariant(){
+ if(!editing.value)return
+ editing.value.config.variants??=[]
+ if(editing.value.config.variants.length>=12)return
+ const name=variantNames[editing.value.config.variants.length]||`Colour ${editing.value.config.variants.length+1}`
+ const id=`colour_${Date.now().toString(36)}`
+ const tone=variantTones[editing.value.config.variants.length]||'#6B431D'
+ editing.value.config.variants.push({id,name,background_path:null,colors:Object.fromEntries(fields.map(f=>[f.key,tone]))})
+ activeVariantId.value=id
+}
+function removeVariant(id:string){if(!editing.value)return;editing.value.config.variants=variants(editing.value).filter((v:any)=>v.id!==id);if(activeVariantId.value===id)activeVariantId.value=''}
+const activeVariant=computed(()=>variants(editing.value).find((v:any)=>v.id===activeVariantId.value))
+const previewConfig=computed(()=>{
+ if(!editing.value)return {}
+ const cfg=structuredClone(editing.value.config)
+ if(activeVariant.value)for(const [key,color] of Object.entries(activeVariant.value.colors||{})){
+  cfg.typography[key]??={};cfg.typography[key].color=color
+ }
+ return cfg
+})
+const previewBackground=computed(()=>activeVariant.value?.background_url||editing.value?.background_url||null)
+async function uploadVariant(e:Event){
+ const input=e.target as HTMLInputElement,file=input.files?.[0],t=editing.value,v=activeVariant.value
+ if(!file||!t||!v)return
+ busy.value=true;error.value=''
+ try{
+  // Persist the variant ID first, so the upload can attach its artwork safely.
+  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
+  const form=new FormData();form.append('id',t.id);form.append('variationId',v.id);form.append('image',file)
+  const result=await $fetch<any>('/api/admin/sign-template-background',{method:'POST',headers:await headers(),body:form})
+  const updated=result.template.variants.find((x:any)=>x.id===v.id)
+  if(updated){v.background_path=updated.background_path;v.background_url=updated.background_url}
+  dialog.show('Variation artwork uploaded.','success')
+ }catch(e:any){error.value=errText(e)}finally{busy.value=false;input.value=''}
+}
 onMounted(load)
 </script>
 <template>
@@ -89,7 +129,7 @@ onMounted(load)
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
    <article v-for="t in filtered" :key="t.id" class="panel space-y-3">
     <div class="relative overflow-hidden rounded-lg bg-[#FFF9ED] h-48 flex items-center justify-center">
-     <img v-if="t.background_url" :src="t.background_url" alt="" class="h-full w-full object-contain"/>
+     <img v-if="t.variants?.[0]?.background_url||t.background_url" :src="t.variants?.[0]?.background_url||t.background_url" alt="" class="h-full w-full object-contain"/>
      <span v-else class="text-sm text-[#536273]">No background artwork</span>
     </div>
     <div class="flex justify-between gap-2"><strong>{{t.name}}</strong><span class="text-xs uppercase text-[#536273]">{{t.status}}</span></div>
@@ -124,6 +164,23 @@ onMounted(load)
       <div v-for="(key,index) in orderedKeys(editing.config)" :key="key" class="flex items-center justify-between rounded border px-3 py-2 text-sm">
        <span>{{index+1}}. {{contentLabels[key]}}</span>
        <div class="flex gap-2"><button type="button" class="btn" :disabled="index===0" :aria-label="'Move '+contentLabels[key]+' up'" @click="moveContent(editing.config,key,-1)">↑</button><button type="button" class="btn" :disabled="index===orderedKeys(editing.config).length-1" :aria-label="'Move '+contentLabels[key]+' down'" @click="moveContent(editing.config,key,1)">↓</button></div>
+      </div>
+      <h4 class="font-semibold border-t pt-3">Colour variations</h4>
+      <p class="text-xs text-[#536273]">One master layout, multiple artworks and matching font colours. All variations inherit the same content areas, fonts and sizes.</p>
+      <button type="button" class="btn" :disabled="variants(editing).length>=12" @click="addVariant">+ Add colour variation</button>
+      <div v-for="v in variants(editing)" :key="v.id" class="rounded-lg border p-3 space-y-2">
+       <div class="flex gap-2 items-center">
+        <input v-model="v.name" maxlength="60" class="input flex-1 min-w-0" aria-label="Variation name"/>
+        <button type="button" class="btn" @click="activeVariantId=v.id">{{activeVariantId===v.id?'Previewing':'Preview'}}</button>
+        <button type="button" class="btn" @click="removeVariant(v.id)">Remove</button>
+       </div>
+       <template v-if="activeVariantId===v.id">
+        <label class="block text-sm">Variation artwork (PNG, JPG or WebP)<input type="file" accept="image/png,image/jpeg,image/webp" class="block mt-1" :disabled="busy" @change="uploadVariant"/></label>
+        <img v-if="v.background_url" :src="v.background_url" class="h-28 object-contain" alt="Variation artwork"/>
+        <div class="grid grid-cols-2 gap-2">
+         <label v-for="f in fields" :key="f.key" class="text-xs">{{f.label}} colour<input v-model="v.colors[f.key]" type="color" class="block h-9 w-full mt-1"/></label>
+        </div>
+       </template>
       </div>
       <h4 class="font-semibold border-t pt-3">Typography defaults</h4>
       <div v-for="f in fields" :key="f.key" class="rounded-lg border border-[#D6B077] p-3 space-y-2">
@@ -160,7 +217,7 @@ onMounted(load)
       </div>
       <div class="mx-auto w-full max-w-[390px]">
        <div class="relative">
-        <SignStudioCanvas :config="editing.config" :background-url="editing.background_url" event-name="Daniel & Hannah" event-date="15 MAY 2026" sample/>
+        <SignStudioCanvas :config="previewConfig" :background-url="previewBackground" event-name="Daniel & Hannah" event-date="15 MAY 2026" sample/>
         <div ref="areaCanvas" class="absolute inset-0 z-10 cursor-crosshair touch-none" @pointerdown="startArea" @pointermove="moveArea" @pointerup="finishArea" @pointercancel="finishArea">
          <div v-for="(area,key) in editing.config.smartAreas||{}" :key="key" class="absolute border-2 border-dashed pointer-events-none" :class="activeArea===key?'border-blue-600 bg-blue-400/15':'border-emerald-500/70'" :style="{left:area.x+'%',top:area.y+'%',width:area.w+'%',height:area.h+'%'}"><span class="bg-white/90 text-[10px] text-[#0C1D2D] px-1">{{areaNames[key]||key}}</span></div>
         </div>

@@ -9,6 +9,7 @@ export default defineEventHandler(async event=>{
  if(!role)throw createError({statusCode:403,statusMessage:'Administration access required'})
  const parts=await readMultipartFormData(event)
  const id=parts?.find(p=>p.name==='id')?.data.toString('utf8')||''
+ const variationId=parts?.find(p=>p.name==='variationId')?.data.toString('utf8')||''
  const file=parts?.find(p=>p.name==='image')
  const row=await requireTemplate(id)
  if(!file||!file.data.length||file.data.length>12*1024*1024)throw createError({statusCode:400,statusMessage:'Image must be 12 MB or smaller'})
@@ -21,7 +22,16 @@ export default defineEventHandler(async event=>{
  const db=adminDb()
  const {error:uploadError}=await db.storage.from(COVER_BUCKET).upload(path,bytes,{contentType:mime,upsert:false})
  if(uploadError)throw createError({statusCode:500,statusMessage:'Background upload failed'})
- const {data,error}=await db.from('sign_template_library').update({background_path:path,updated_at:new Date().toISOString()}).eq('id',row.id).select('*').single()
+ const changes:any={updated_at:new Date().toISOString()}
+ if(variationId){
+  const config=structuredClone(row.config||{})
+  if(!Array.isArray(config.variants))throw createError({statusCode:400,statusMessage:'Save the variation before uploading artwork'})
+  const variant=config.variants.find((v:any)=>v.id===variationId)
+  if(!variant)throw createError({statusCode:404,statusMessage:'Variation not found; save the template first'})
+  variant.background_path=path
+  changes.config=config
+ }else changes.background_path=path
+ const {data,error}=await db.from('sign_template_library').update(changes).eq('id',row.id).select('*').single()
  if(error)throw createError({statusCode:500,statusMessage:'Could not attach background'})
  return {template:await templateView(data)}
 })

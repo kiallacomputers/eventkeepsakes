@@ -5,7 +5,7 @@ export default defineEventHandler(async event=>{
  const userId=await ownerUser(event),b=await readBody(event),db=adminDb()
  if(b.action==='save'){
   let background_path:string|null=null
-  if(b.sourceTemplateId){const source=await requireTemplate(String(b.sourceTemplateId));if(source.status!=='published'&&source.owner_id!==userId)throw createError({statusCode:403,statusMessage:'Cannot reuse private template artwork'});background_path=source.background_path||null}
+  if(b.sourceTemplateId){const source=await requireTemplate(String(b.sourceTemplateId));if(source.status!=='published'&&source.owner_id!==userId)throw createError({statusCode:403,statusMessage:'Cannot reuse private template artwork'});background_path=(source.config?.variants||[]).find((v:any)=>v.id===b.config?.selectedVariantId)?.background_path||source.background_path||null}
   const row={background_path,owner_id:userId,name:templateName(b.name),category:templateCategory(b.category),config:validTemplateConfig(b.config),status:'personal',permission_to_publish:false}
   const {data,error}=await db.from('sign_template_library').insert(row).select('*').single()
   if(error)throw createError({statusCode:500,statusMessage:'Could not save personal layout'})
