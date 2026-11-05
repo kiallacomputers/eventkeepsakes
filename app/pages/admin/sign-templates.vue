@@ -55,6 +55,33 @@ async function save(t:any){busy.value=true;error.value='';try{
  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
  dialog.show('Template saved.','success');await load();editing.value=null
  }catch(e:any){error.value=errText(e)}finally{busy.value=false}}
+async function archiveTemplate(t:any){
+ if(!window.confirm(`Archive "${t.name}"? It will no longer be available for new event signs.`))return
+ busy.value=true;error.value=''
+ try{
+  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,status:'archived',name:t.name,category:t.category}})
+  if(editing.value?.id===t.id)editing.value=null
+  await load();dialog.show('Template archived.','success')
+ }catch(e:any){error.value=errText(e)}finally{busy.value=false}
+}
+async function restoreTemplate(t:any){
+ busy.value=true;error.value=''
+ try{
+  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,status:'personal',name:t.name,category:t.category}})
+  if(editing.value?.id===t.id)editing.value=null
+  await load();dialog.show('Template restored as a draft. Publish when ready.','success')
+ }catch(e:any){error.value=errText(e)}finally{busy.value=false}
+}
+async function deleteTemplate(t:any){
+ if(!t.can_delete)return
+ if(!window.confirm(`Permanently delete "${t.name}" and its colour variations? This cannot be undone. Existing saved signs must not depend on it.`))return
+ busy.value=true;error.value=''
+ try{
+  await $fetch('/api/admin/sign-templates',{method:'DELETE',headers:await headers(),query:{id:t.id}})
+  if(editing.value?.id===t.id)editing.value=null
+  await load();dialog.show('Unused template deleted.','success')
+ }catch(e:any){error.value=errText(e)}finally{busy.value=false}
+}
 async function duplicate(t:any){busy.value=true;error.value='';try{
  const r=await $fetch<any>('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{action:'duplicate',id:t.id,name:`${t.name} Copy`,category:t.category}})
  await load();openEditor(r.template);dialog.show('Created an independent draft copy.','success')
@@ -135,7 +162,13 @@ onMounted(load)
     <div class="flex justify-between gap-2"><strong>{{t.name}}</strong><span class="text-xs uppercase text-[#536273]">{{t.status}}</span></div>
     <p class="text-xs text-[#536273] capitalize">{{t.category}} · {{t.config?.paper||'A4'}}</p>
     <p v-if="!t.can_publish" class="text-xs text-amber-800">Requires owner permission before publishing.</p>
-    <div class="flex flex-wrap gap-2"><button class="btn" @click="openEditor(t)">Edit / Manage</button><button class="btn" :disabled="busy" @click="duplicate(t)">Duplicate</button></div>
+    <div class="flex flex-wrap gap-2">
+     <button class="btn" @click="openEditor(t)">Edit / Manage</button>
+     <button class="btn" :disabled="busy" @click="duplicate(t)">Duplicate</button>
+     <button v-if="t.status!=='archived'" class="btn" :disabled="busy" @click="archiveTemplate(t)">Archive</button>
+     <button v-else class="btn" :disabled="busy" @click="restoreTemplate(t)">Restore draft</button>
+     <button v-if="t.can_delete" type="button" class="btn" style="color:#991b1b;border-color:#fca5a5" :disabled="busy||t.status==='published'" @click="deleteTemplate(t)">Delete</button>
+    </div>
    </article>
   </div>
   <div v-if="editing" class="fixed inset-0 z-[100] overflow-y-auto bg-[#07131CCC] p-3 md:p-8" role="dialog" aria-modal="true" aria-label="Edit sign template">
