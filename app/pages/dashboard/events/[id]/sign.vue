@@ -399,7 +399,11 @@ function applyLibraryLayout(t:any){
  // Reuse the same loader as event posters; it restores all editable fields and typography.
  openSavedPoster({name:t.name,config:t.config,snapshot_url:null})
  useCover.value=false;photoFill.value=false;posterCover.value=null
- templateBackground.value=t.background_url||null;backgroundPath.value=t.background_path||null
+ // Show the first colour variation as the initial preview, without choosing it.
+ // The owner must still explicitly select a variation before personalising.
+ const firstVariation=Array.isArray(t.variants)?t.variants[0]:null
+ templateBackground.value=firstVariation?.background_url||t.background_url||null
+ backgroundPath.value=firstVariation?.background_path||t.background_path||null
  selectedLayoutId.value=t.id;backgroundTemplateId.value=t.id;layoutName.value=t.name
  selectedVariantId.value=''
  // Show variation selection even for a single-colour template.
