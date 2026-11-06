@@ -9,7 +9,7 @@ const categories=['wedding','birthday','celebration','christening','baby','gradu
 const filtered=computed(()=>templates.value.filter(t=>(statusFilter.value==='all'||t.status===statusFilter.value)&&`${t.name} ${t.category}`.toLowerCase().includes(search.value.toLowerCase())))
 const defaultConfig=()=>({
  contentOrder:['heading','event','date','message','qr','action'],
- paper:'A4',theme:'classic',heading:'Welcome to our wedding',message:'Scan the QR code to share your photos and videos.',showDate:true,useCover:false,
+ paper:'A4',eventTitleLayout:'single',theme:'classic',heading:'Welcome to our wedding',message:'Scan the QR code to share your photos and videos.',showDate:true,useCover:false,
  qrColourMode:'dark',qrPosition:'bottom',qrSize:52,photoOverlay:28,photoFill:false,categoryId:newCategory.value,paletteIndex:0,paletteBackground:'#FFF9ED',
  layers:[],decoration:'none',decorationOpacity:65,decorationSize:85,decorationRotation:0,decorationPosition:'top-left',decorationColour:'#B18A50',
  brandColour:'#6B431D',brandAccent:'#B18A50',
@@ -276,6 +276,22 @@ onMounted(load)
          <label v-for="f in fields" :key="f.key" class="text-xs">{{f.label}} colour<input v-model="v.colors[f.key]" type="color" class="block h-9 w-full mt-1"/></label>
         </div>
        </template>
+      </div>
+      <div class="rounded-lg border border-[#D6B077] p-3 space-y-2">
+       <h4 class="font-semibold">Event Title — Creative Layout</h4>
+       <p class="text-xs text-[#536273]">Controls how two names such as “Daniel & Hannah” appear. All layouts stay inside the Event Title Smart Content Area and are shared with the owner and print preview.</p>
+       <label class="block text-sm">Name arrangement
+        <select v-model="editing.config.eventTitleLayout" class="input mt-1 w-full">
+         <option value="single">Classic — one line</option>
+         <option value="stacked">Stacked — name / & / name</option>
+         <option value="overlap">Romantic overlap — staggered names</option>
+         <option value="diagonal">Diagonal — cascading names</option>
+         <option value="side-by-side">Side by side — large decorative &</option>
+         <option value="monogram">Monogram — initials above names</option>
+         <option value="split">Elegant split — & between two names</option>
+        </select>
+       </label>
+       <p class="text-xs text-[#536273]">If the event title does not contain two names joined by “&” or “and”, it displays normally.</p>
       </div>
       <h4 class="font-semibold border-t pt-3">Typography defaults</h4>
       <div v-for="f in fields" :key="f.key" class="rounded-lg border border-[#D6B077] p-3 space-y-2">

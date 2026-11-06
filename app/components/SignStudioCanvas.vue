@@ -65,7 +65,8 @@ function fitText(){
   canvas.appendChild(measure)
   const fits=(size:number)=>{
    measure.style.fontSize=`${size}px`
-   return measure.scrollHeight<=height+1&&measure.scrollWidth<=width+1
+   const reserve=key==='event'&&creativeTitle.value?1.08:1
+   return measure.scrollHeight*reserve<=height+1&&measure.scrollWidth*reserve<=width+1
   }
   try{
    if(fits(upper)){next[key]=upper;continue}
@@ -109,6 +110,14 @@ function fieldText(key:SignKey){
  if(key==='action')return props.config?.actionText||'Point your phone camera here'
  return ''
 }
+const titleLayout=computed(()=>String(props.config?.eventTitleLayout||'single'))
+const pairedNames=computed(()=>{
+ const parts=String(props.eventName||'').split(/\\s+(?:&|and)\\s+/i).map(s=>s.trim())
+ return parts.length===2&&parts.every(Boolean)?parts:null
+})
+const creativeTitle=computed(()=>pairedNames.value&&titleLayout.value!=='single')
+function titleModeClass(){return 'ek-title-'+( ['stacked','overlap','diagonal','side-by-side','monogram','split'].includes(titleLayout.value)?titleLayout.value:'single')}
+function initials(name:string){return name.split(/\\s+/).filter(Boolean).map(s=>s[0]?.toUpperCase()||'').slice(0,2).join('')}
 function textStyle(key:SignKey){
  const t=props.config?.typography?.[key]||{},p=props.config?.textPlacement?.[key]||{}
  const n=Number(t.size||16)
@@ -129,7 +138,15 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
       <img v-if="qrImage" class="ek-smart-qr" :src="qrImage" alt="QR code for event uploads"/>
       <span v-else class="ek-shared-qr-pending">QR loading</span>
      </template>
-     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??pxFromReference(requestedSize(key)))+'px',transform:'none',width:'100%',overflow:'visible'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">{{fieldText(key)}}</div>
+     <div v-else class="ek-fit-text" :class="{'ek-shared-editable':editable}" :style="{...textStyle(key),fontSize:(fittedSizes[key]??pxFromReference(requestedSize(key)))+'px',transform:'none',width:'100%',overflow:'visible'}" :role="editable?'button':undefined" :tabindex="editable?0:undefined" @click="choose(key)" @keydown.enter="choose(key)">
+      <span v-if="key==='event'&&creativeTitle" class="ek-creative-title" :class="titleModeClass()">
+       <span v-if="titleLayout==='monogram'" class="ek-title-monogram">{{initials(pairedNames![0])}} <span class="ek-title-monogram-amp">&amp;</span> {{initials(pairedNames![1])}}</span>
+       <span class="ek-title-first">{{pairedNames![0]}}</span>
+       <span class="ek-title-amp">&amp;</span>
+       <span class="ek-title-second">{{pairedNames![1]}}</span>
+      </span>
+      <template v-else>{{fieldText(key)}}</template>
+     </div>
     </div>
    </template>
   </div>
@@ -143,7 +160,13 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
      class="ek-shared-text" :class="{'ek-shared-editable':editable}"
      :role="editable?'button':undefined" :tabindex="editable?0:undefined"
      :style="textStyle(key)" @click="choose(key)" @keydown.enter="choose(key)">
-     {{fieldText(key)}}
+     <span v-if="key==='event'&&creativeTitle" class="ek-creative-title" :class="titleModeClass()">
+      <span v-if="titleLayout==='monogram'" class="ek-title-monogram">{{initials(pairedNames![0])}} <span class="ek-title-monogram-amp">&amp;</span> {{initials(pairedNames![1])}}</span>
+      <span class="ek-title-first">{{pairedNames![0]}}</span>
+      <span class="ek-title-amp">&amp;</span>
+      <span class="ek-title-second">{{pairedNames![1]}}</span>
+     </span>
+     <template v-else>{{fieldText(key)}}</template>
     </div>
    </template>
   </div>
@@ -166,5 +189,31 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 
 .ek-smart-qr{display:block;max-width:100%;max-height:100%;width:auto;height:auto;aspect-ratio:1;object-fit:contain;background:#fff;padding:3%;box-sizing:border-box}
 .ek-shared-qr-pending{background:#fff;padding:10px;color:#333;font-size:12px}
-@media print {.ek-shared-sign,.ek-shared-sign *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}
+
+/* Event title arrangements use the same font family, size and variation colour
+   as the normal event title. They are laid out inside the existing Smart Area. */
+.ek-creative-title{position:relative;display:grid;align-items:center;justify-items:center;width:100%;max-width:100%;line-height:1.15;white-space:normal;overflow:visible;box-sizing:border-box;padding:.18em .12em}
+.ek-creative-title>span{min-width:0;max-width:100%;overflow:visible;overflow-wrap:anywhere}
+.ek-title-amp{font-family:Georgia,serif;font-style:italic;font-weight:400;opacity:.68}
+.ek-title-stacked{grid-template-columns:1fr;gap:.04em}
+.ek-title-stacked .ek-title-amp{font-size:.8em;line-height:.9}
+.ek-title-overlap{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;row-gap:0}
+.ek-title-overlap .ek-title-first{grid-area:1/1/2/3;justify-self:start;margin-left:7%}
+.ek-title-overlap .ek-title-amp{grid-area:2/1/3/3;font-size:1.12em;line-height:.65}
+.ek-title-overlap .ek-title-second{grid-area:3/1/4/3;justify-self:end;margin-right:7%}
+.ek-title-diagonal{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto}
+.ek-title-diagonal .ek-title-first{grid-area:1/1/2/3;justify-self:start}
+.ek-title-diagonal .ek-title-amp{grid-area:2/1/3/3;line-height:.8;font-size:.85em}
+.ek-title-diagonal .ek-title-second{grid-area:3/1/4/3;justify-self:end}
+.ek-title-side-by-side{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:.12em}
+.ek-title-side-by-side .ek-title-amp{font-size:1.3em}
+.ek-title-monogram{grid-template-columns:1fr;gap:.08em}
+.ek-title-monogram .ek-title-monogram{font-family:Georgia,serif;font-size:.85em;letter-spacing:.14em;font-style:normal;opacity:.8}
+.ek-title-monogram .ek-title-monogram-amp{font-size:.65em;opacity:.65}
+.ek-title-monogram .ek-title-amp{font-size:.65em;line-height:.8}
+.ek-title-split{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:.15em}
+.ek-title-split .ek-title-first{justify-self:end}
+.ek-title-split .ek-title-second{justify-self:start}
+.ek-title-split .ek-title-amp{font-size:1.65em;line-height:1}
+\n@media print {.ek-shared-sign,.ek-shared-sign *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}
 </style>
