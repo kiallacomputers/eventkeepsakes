@@ -82,6 +82,7 @@ async function signOut() {
       </div>
     </div>
     <template v-else>
+    <a href="#main" class="skip-link">Skip to content</a>
 
     <!-- Main Header -->
     <header v-if="!isGuestPage" class="border-b border-[#E4D8C5] bg-[#F8F4EB]">
@@ -111,7 +112,7 @@ async function signOut() {
         </NuxtLink>
 
         <!-- Public packages are available without an account; account links remain private. -->
-        <nav v-if="!isGuestPage" class="flex flex-wrap items-center gap-4 sm:gap-5">
+        <nav v-if="!isGuestPage" aria-label="Main" class="flex flex-wrap items-center gap-4 sm:gap-5">
           <NuxtLink to="/packages" class="text-sm font-medium text-[#0C1D2D] transition hover:text-[#B18A50]" active-class="!text-[#B18A50]">Packages</NuxtLink>
           <template v-if="showAccountNavigation">
           <NuxtLink
@@ -147,7 +148,7 @@ async function signOut() {
     </header>
 
     <!-- Page Content -->
-    <main :class="isGuestPage ? 'min-h-screen' : 'min-h-[calc(100vh-180px)]'">
+    <main id="main" tabindex="-1" :class="isGuestPage ? 'min-h-screen' : 'min-h-[calc(100vh-180px)]'">
       <NuxtPage />
     </main>
 

@@ -8,10 +8,11 @@ const money = (cents: number, currency = 'AUD') => new Intl.NumberFormat('en-AU'
 const capacity = (bytes: number) => bytes < 1073741824 ? `${Math.round(bytes / 1048576)} MB` : `${Number((bytes / 1073741824).toFixed(1))} GB`
 const duration = (days: number) => days === 365 ? '12 months' : days === 730 ? '24 months' : `${days} days`
 const user = useSupabaseUser()
+useSeoMeta({ title: 'Packages & Pricing', description: 'Simple one-time packages for storing and sharing your event photos and videos.' })
 </script>
 
 <template>
-  <main class="mx-auto max-w-6xl space-y-8 px-5 py-12">
+  <div class="mx-auto max-w-6xl space-y-8 px-5 py-12">
     <header class="mx-auto max-w-2xl space-y-3 text-center">
       <p class="text-xs font-semibold uppercase tracking-[.2em] text-[#B18A50]">EventKeepsakes</p>
       <h1 class="font-serif text-4xl font-bold text-[#0C1D2D]">Packages & Pricing</h1>
@@ -42,5 +43,5 @@ const user = useSupabaseUser()
       </article>
     </div>
     <p class="text-center text-sm text-[#536273]">Already have an event? Open it from your dashboard to purchase or upgrade its package.</p>
-  </main>
+  </div>
 </template>

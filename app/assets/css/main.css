@@ -12,3 +12,10 @@ a { transition: color .2s ease; }
 .btn:hover { background: #203C52; }
 .panel { @apply rounded-2xl border p-6; background: #FFFCF6; border-color: rgba(160,123,75,.3); box-shadow: 0 10px 30px rgba(12,29,45,.06); }
 ::selection { background: #D6B077; color: #0C1D2D; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid #B18A50; outline-offset: 3px; border-radius: 6px; }
+main:focus { outline: none; }
+.skip-link { position: absolute; left: 1rem; top: -4rem; z-index: 50; padding: .6rem 1rem; border-radius: .5rem; background: #0C1D2D; color: #F8F4EB; transition: top .15s ease; }
+.skip-link:focus { top: 1rem; }
+.btn-ghost { @apply inline-flex items-center justify-center rounded-lg border px-5 py-3 font-semibold transition; border-color: rgba(182,140,83,.6); color: #90612E; }
+.btn-ghost:hover { background: #F0E4D1; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
