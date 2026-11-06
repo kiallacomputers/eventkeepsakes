@@ -194,7 +194,7 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
    as the normal event title. They are laid out inside the existing Smart Area. */
 .ek-creative-title{position:relative;display:grid;align-items:center;justify-items:center;width:100%;max-width:100%;line-height:1.15;white-space:normal;overflow:visible;box-sizing:border-box;padding:.18em .12em}
 .ek-creative-title>span{min-width:0;max-width:100%;overflow:visible;overflow-wrap:anywhere}
-.ek-title-amp{font-family:Georgia,serif;font-style:italic;font-weight:400;opacity:.68}
+.ek-title-amp{font-family:inherit;font-style:inherit;font-weight:inherit;opacity:.68}
 .ek-title-stacked{grid-template-columns:1fr;gap:.04em}
 .ek-title-stacked .ek-title-amp{font-size:.8em;line-height:.9}
 .ek-title-overlap{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;row-gap:0}
@@ -208,7 +208,7 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 .ek-title-side-by-side{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:.12em}
 .ek-title-side-by-side .ek-title-amp{font-size:1.3em}
 .ek-title-monogram{grid-template-columns:1fr;gap:.08em}
-.ek-title-monogram .ek-title-monogram{font-family:Georgia,serif;font-size:.85em;letter-spacing:.14em;font-style:normal;opacity:.8}
+.ek-title-monogram .ek-title-monogram{font-family:inherit;font-size:.85em;letter-spacing:.14em;font-style:inherit;opacity:.8}
 .ek-title-monogram .ek-title-monogram-amp{font-size:.65em;opacity:.65}
 .ek-title-monogram .ek-title-amp{font-size:.65em;line-height:.8}
 .ek-title-split{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:.15em}
