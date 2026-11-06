@@ -3,6 +3,7 @@ definePageMeta({middleware:'auth'})
 const client=useSupabaseClient(),dialog=useAppDialog()
 const templates=ref<any[]>([]),busy=ref(false),error=ref(''),statusFilter=ref('all'),search=ref('')
 const editing=ref<any|null>(null),createOpen=ref(false)
+const confirmAction=ref<{kind:'archive'|'delete';template:any}|null>(null)
 const newName=ref('New Wedding Template'),newCategory=ref('wedding')
 const categories=['wedding','birthday','celebration','christening','baby','graduation','corporate','anniversary','memorial','other']
 const filtered=computed(()=>templates.value.filter(t=>(statusFilter.value==='all'||t.status===statusFilter.value)&&`${t.name} ${t.category}`.toLowerCase().includes(search.value.toLowerCase())))
@@ -55,8 +56,16 @@ async function save(t:any){busy.value=true;error.value='';try{
  await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
  dialog.show('Template saved.','success');await load();editing.value=null
  }catch(e:any){error.value=errText(e)}finally{busy.value=false}}
+function askArchive(t:any){confirmAction.value={kind:'archive',template:t}}
+function askDelete(t:any){if(t.can_delete)confirmAction.value={kind:'delete',template:t}}
+async function confirmTemplateAction(){
+ const action=confirmAction.value
+ if(!action||busy.value)return
+ if(action.kind==='delete')await deleteTemplate(action.template)
+ else await archiveTemplate(action.template)
+ if(!error.value)confirmAction.value=null
+}
 async function archiveTemplate(t:any){
- if(!window.confirm(`Archive "${t.name}"? It will no longer be available for new event signs.`))return
  busy.value=true;error.value=''
  try{
   await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,status:'archived',name:t.name,category:t.category}})
@@ -74,7 +83,6 @@ async function restoreTemplate(t:any){
 }
 async function deleteTemplate(t:any){
  if(!t.can_delete)return
- if(!window.confirm(`Permanently delete "${t.name}" and its colour variations? This cannot be undone. Existing saved signs must not depend on it.`))return
  busy.value=true;error.value=''
  try{
   await $fetch('/api/admin/sign-templates',{method:'DELETE',headers:await headers(),query:{id:t.id}})
@@ -117,18 +125,72 @@ const previewConfig=computed(()=>{
  return cfg
 })
 const previewBackground=computed(()=>activeVariant.value?.background_url||editing.value?.background_url||null)
+// Suggest readable colours from the artwork's coloured pixels, not its white centre.
+// The local File is analysed before upload so CORS does not interfere.
+async function suggestArtworkTextColours(file:File):Promise<Record<string,string>>{
+ const bitmap=await createImageBitmap(file)
+ try{
+  const canvas=document.createElement('canvas');canvas.width=120;canvas.height=170
+  const ctx=canvas.getContext('2d',{willReadFrequently:true})
+  if(!ctx)throw new Error('Canvas is unavailable')
+  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height)
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data
+  const buckets=new Map<number,{weight:number,r:number,g:number,b:number}>()
+  for(let i=0;i<data.length;i+=16){
+   const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3]/255
+   if(a<0.5)continue
+   const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min
+   // Exclude near-white, grey and nearly black pixels: floral colours
+   // are more representative of the theme than empty sign space.
+   if(max>247||delta<16||max<55)continue
+   const hue=(()=>{
+    if(!delta)return 0
+    const h=max===r?((g-b)/delta)%6:max===g?(b-r)/delta+2:(r-g)/delta+4
+    return (h*60+360)%360
+   })()
+   const key=Math.floor(hue/20)
+   const saturation=delta/(max||1)
+   const weight=a*(0.25+saturation)*Math.max(0.2,1-Math.abs(max-160)/260)
+   const bucket=buckets.get(key)||{weight:0,r:0,g:0,b:0}
+   bucket.weight+=weight;bucket.r+=r*weight;bucket.g+=g*weight;bucket.b+=b*weight
+   buckets.set(key,bucket)
+  }
+  const ranked=[...buckets.values()].sort((a,b)=>b.weight-a.weight)
+  if(!ranked.length)throw new Error('No floral accent colours detected')
+  const pick=ranked[0]
+  let r=pick.r/pick.weight,g=pick.g/pick.weight,b=pick.b/pick.weight
+  // Darken the artwork tone without losing its hue. Aim for strong
+  // contrast against the pale/white centre of a welcome sign.
+  const luminance=(r:number,g:number,b:number)=>{
+   const c=[r,g,b].map(v=>{v/=255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4})
+   return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]
+  }
+  for(let i=0;i<30&&luminance(r,g,b)>0.13;i++){
+   r*=0.92;g*=0.92;b*=0.92
+  }
+  const hex='#'+[r,g,b].map(n=>Math.round(n).toString(16).padStart(2,'0')).join('').toUpperCase()
+  return Object.fromEntries(fields.map(f=>[f.key,hex]))
+ }finally{bitmap.close()}
+}
 async function uploadVariant(e:Event){
  const input=e.target as HTMLInputElement,file=input.files?.[0],t=editing.value,v=activeVariant.value
  if(!file||!t||!v)return
  busy.value=true;error.value=''
  try{
+  let suggestedColors:Record<string,string>|null=null
+  try{suggestedColors=await suggestArtworkTextColours(file)}catch{ /* Leave manual colours intact if analysis is unavailable. */ }
   // Persist the variant ID first, so the upload can attach its artwork safely.
   await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
   const form=new FormData();form.append('id',t.id);form.append('variationId',v.id);form.append('image',file)
   const result=await $fetch<any>('/api/admin/sign-template-background',{method:'POST',headers:await headers(),body:form})
   const updated=result.template.variants.find((x:any)=>x.id===v.id)
   if(updated){v.background_path=updated.background_path;v.background_url=updated.background_url}
-  dialog.show('Variation artwork uploaded.','success')
+  if(suggestedColors){
+   v.colors={...(v.colors||{}),...suggestedColors}
+   // Persist the auto-matched colours; don't require an additional Save click.
+   await $fetch('/api/admin/sign-templates',{method:'POST',headers:await headers(),body:{id:t.id,name:t.name,category:t.category,status:t.status,config:t.config}})
+  }
+  dialog.show(suggestedColors?'Variation uploaded and matching font colours saved.':'Variation uploaded. Set font colours manually for this artwork.','success')
  }catch(e:any){error.value=errText(e)}finally{busy.value=false;input.value=''}
 }
 onMounted(load)
@@ -165,9 +227,9 @@ onMounted(load)
     <div class="flex flex-wrap gap-2">
      <button class="btn" @click="openEditor(t)">Edit / Manage</button>
      <button class="btn" :disabled="busy" @click="duplicate(t)">Duplicate</button>
-     <button v-if="t.status!=='archived'" class="btn" :disabled="busy" @click="archiveTemplate(t)">Archive</button>
+     <button v-if="t.status!=='archived'" class="btn" :disabled="busy" @click="askArchive(t)">Archive</button>
      <button v-else class="btn" :disabled="busy" @click="restoreTemplate(t)">Restore draft</button>
-     <button v-if="t.can_delete" type="button" class="btn" style="color:#991b1b;border-color:#fca5a5" :disabled="busy||t.status==='published'" @click="deleteTemplate(t)">Delete</button>
+     <button v-if="t.can_delete" type="button" class="btn" style="color:#991b1b;border-color:#fca5a5" :disabled="busy||t.status==='published'" @click="askDelete(t)">Delete</button>
     </div>
    </article>
   </div>
@@ -261,5 +323,27 @@ onMounted(load)
     </div>
    </div>
   </div>
+   <div v-if="confirmAction" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0C1D2D]/65 p-4" role="presentation" @click.self="!busy&&(confirmAction=null)">
+    <div role="alertdialog" aria-modal="true" aria-labelledby="template-confirm-title" aria-describedby="template-confirm-desc" class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl space-y-4">
+     <h3 id="template-confirm-title" class="text-xl font-semibold text-[#0C1D2D]">
+      {{confirmAction.kind==='delete'?'Permanently delete template?':'Archive template?'}}
+     </h3>
+     <p id="template-confirm-desc" class="text-sm text-[#536273]">
+      <template v-if="confirmAction.kind==='delete'">
+       Delete <strong>{{confirmAction.template.name}}</strong> and all its colour variation definitions? This cannot be undone. Templates in use will be protected by the server.
+      </template>
+      <template v-else>
+       Archive <strong>{{confirmAction.template.name}}</strong>? It will be hidden from new event signs but can be restored later.
+      </template>
+     </p>
+     <p v-if="error" role="alert" class="text-sm text-red-700">{{error}}</p>
+     <div class="flex justify-end gap-3">
+      <button type="button" class="btn" :disabled="busy" @click="confirmAction=null">Cancel</button>
+      <button type="button" class="btn" :disabled="busy" :style="confirmAction.kind==='delete'?'background:#991b1b;color:white;border-color:#991b1b':''" @click="confirmTemplateAction">
+       {{busy?'Please wait…':confirmAction.kind==='delete'?'Delete permanently':'Archive template'}}
+      </button>
+     </div>
+    </div>
+   </div>
  </section>
 </template>
