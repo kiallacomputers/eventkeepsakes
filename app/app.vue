@@ -85,7 +85,7 @@ async function signOut() {
     <a href="#main" class="skip-link">Skip to content</a>
 
     <!-- Main Header -->
-    <header v-if="!isGuestPage" class="border-b border-[#E4D8C5] bg-[#F8F4EB]">
+    <header v-if="!isGuestPage" class="sticky top-0 z-30 border-b border-[#E4D8C5] bg-[#F8F4EB]/90 backdrop-blur">
       <div
         class="mx-auto flex max-w-7xl items-center
                justify-between gap-4 px-5 py-5"

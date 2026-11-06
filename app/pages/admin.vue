@@ -45,9 +45,9 @@ onMounted(async () => {
          :class="active(tab.to)?'bg-[#0C1D2D] text-white':'text-[#0C1D2D] hover:bg-[#EEE7DB]'"
          :aria-current="active(tab.to)?'page':undefined">{{tab.label}}</NuxtLink>
        </nav>
-       <main class="min-w-0 flex-1 w-full">
+       <div class="min-w-0 flex-1 w-full">
         <NuxtPage />
-       </main>
+       </div>
       </div>
     </template>
     <div v-else class="panel">

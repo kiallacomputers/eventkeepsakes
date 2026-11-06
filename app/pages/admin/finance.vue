@@ -14,7 +14,7 @@ const progress=computed(()=>report.value?Math.min(100,Math.round(report.value.su
 onMounted(async()=>{try{const {role}=await $fetch<{role:string}>('/api/admin/me',{headers:await headers()});isSuperAdmin.value=role==='superadmin'}catch{};await load()})
 </script>
 <template>
-<main class="mx-auto max-w-6xl space-y-6 px-5 py-10">
+<div class="mx-auto max-w-6xl space-y-6 px-5 py-10">
  <NuxtLink to="/admin" class="ek-back-button inline-flex rounded-lg border border-[#D6B077] bg-[#FFFDF8] px-4 py-2 text-sm font-semibold">← Back to Administration</NuxtLink>
  <div><h1 class="text-3xl font-bold">EventKeepsakes Financial Dashboard</h1><p class="mt-2 text-sm text-[#536273]">Sales from completed package payments · operating estimates in Australian dollars</p></div>
  <p v-if="error" role="alert" class="rounded-lg border border-red-300 bg-red-50 p-3 text-red-700">{{error}}</p>
@@ -33,5 +33,5 @@ onMounted(async()=>{try{const {role}=await $fetch<{role:string}>('/api/admin/me'
   <section class="panel space-y-4"><h2 class="text-xl font-semibold">Business settings</h2><p class="text-sm text-[#536273]">SuperAdmin-only settings (read-only for Managers). USD costs are converted to AUD using the exchange rate below.</p><div class="grid gap-4 md:grid-cols-2"><label v-for="[key,label] in inputs" :key="key" class="block text-sm">{{label}}<input v-model.number="report.settings[key]" :disabled="!isSuperAdmin" type="number" min="0" step="any" class="input mt-1 w-full" /></label></div><label class="flex items-center gap-3 text-sm"><input v-model="report.settings.gst_registered" :disabled="!isSuperAdmin" type="checkbox"/> Registered for GST (currently off)</label><button v-if="isSuperAdmin" class="btn" :disabled="saving" @click="save">{{saving?'Saving…':'Save financial settings'}}</button></section>
   <section class="panel space-y-2"><h2 class="text-xl font-semibold">Important reporting notes</h2><p v-for="note in report.notes" :key="note" class="text-sm text-[#536273]">• {{note}}</p><p v-if="report.summary.excludedCurrencies" class="text-sm text-amber-700">{{report.summary.excludedCurrencies}} transactions use unsupported currencies and are excluded from AUD totals.</p><p v-if="report.summary.hasMorePayments" class="text-sm text-amber-700">Payment history limit reached: report may be incomplete.</p><p class="text-sm text-[#536273]">Profit is an estimate, not accounting advice or a reconciled profit-and-loss statement. No live Railway usage or refunds feed is connected yet.</p></section>
  </template>
-</main>
+</div>
 </template>

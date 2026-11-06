@@ -2,15 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 :root { color-scheme: light; }
+@layer base { h1, h2, h3 { @apply font-serif; } }
 html { background: #F8F4EB; scrollbar-gutter: stable; }
 body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #F8F4EB; color: #0C1D2D; }
 a { transition: color .2s ease; }
 .input { @apply w-full rounded-lg border px-4 py-3 outline-none; background: #FFFDF9; border-color: #C9BCA8; color: #0C1D2D; }
 .input::placeholder { color: #697585; }
 .input:focus { border-color: #B68C53; box-shadow: 0 0 0 3px rgba(214,176,119,.22); }
-.btn { @apply inline-flex items-center justify-center rounded-lg px-5 py-3 font-semibold transition disabled:opacity-50; background: #0C1D2D; color: #F8F4EB; }
-.btn:hover { background: #203C52; }
-.panel { @apply rounded-2xl border p-6; background: #FFFCF6; border-color: rgba(160,123,75,.3); box-shadow: 0 10px 30px rgba(12,29,45,.06); }
+.btn { @apply inline-flex items-center justify-center rounded-lg px-5 py-3 font-semibold shadow-sm transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50; background: #0C1D2D; color: #F8F4EB; }
+.btn:hover:not(:disabled) { background: #203C52; box-shadow: 0 6px 16px rgba(12,29,45,.18); }
+.panel { @apply rounded-2xl border p-6 transition-shadow; background: #FFFCF6; border-color: rgba(160,123,75,.3); box-shadow: 0 10px 30px rgba(12,29,45,.06); }
 ::selection { background: #D6B077; color: #0C1D2D; }
 a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid #B18A50; outline-offset: 3px; border-radius: 6px; }
 main:focus { outline: none; }
@@ -19,3 +20,7 @@ main:focus { outline: none; }
 .btn-ghost { @apply inline-flex items-center justify-center rounded-lg border px-5 py-3 font-semibold transition; border-color: rgba(182,140,83,.6); color: #90612E; }
 .btn-ghost:hover { background: #F0E4D1; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+a.panel:hover { box-shadow: 0 14px 36px rgba(12,29,45,.10); }
+.badge { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize; background: #EDE2CF; color: #6F5433; }
+.badge-active { background: #E3F1E6; color: #1E6B35; }
+.skeleton { @apply animate-pulse rounded-xl; background: #EADFCB; }

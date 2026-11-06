@@ -49,10 +49,19 @@ onMounted(load)
 </script>
 <template>
   <div class="mx-auto max-w-5xl px-5 py-12">
-    <div class="flex items-center justify-between gap-4"><h1 class="text-3xl font-bold">My events</h1><button class="text-[#90612E]" @click="signOut">Sign out</button></div>
+    <div class="flex items-center justify-between gap-4"><h1 class="text-3xl font-bold">My events</h1></div>
     <p class="text-[#536273] mt-3">Manage your events, QR codes and guest settings.</p>
-    <form class="panel mt-8 space-y-4" @submit.prevent="createEvent">
-      <h2 class="font-semibold text-xl">Create an event</h2>
+    
+    <div v-if="loading" class="mt-8 grid gap-4 md:grid-cols-2" aria-busy="true"><div class="skeleton h-28"></div><div class="skeleton h-28"></div></div>
+    <div v-else class="grid md:grid-cols-2 gap-4 mt-8">
+      <NuxtLink v-for="event in events" :key="event.id" :to="`/dashboard/events/${event.id}`" class="panel block hover:border-[#D6B077]">
+        <h3 class="text-xl font-semibold">{{ event.title }}</h3>
+        <p class="mt-2 flex items-center gap-2 text-sm text-[#536273]">{{ event.event_date || 'Date not set' }} <span class="badge" :class="event.status==='active'&&'badge-active'">{{ event.status }}</span></p>
+        <p class="text-[#90612E] text-sm mt-4">Manage event →</p>
+      </NuxtLink>
+      <p v-if="!events.length" class="text-[#536273]">No events yet. Create your first event below.</p>
+    </div><details class="panel mt-8 group" :open="!loading && !events.length"><summary class="cursor-pointer list-none font-serif text-xl font-semibold marker:hidden">+ Create an event</summary><form class="space-y-4 pt-4" @submit.prevent="createEvent">
+      
       <label class="block text-sm">Event name<input v-model="name" class="input mt-2" required maxlength="150" placeholder="Event name" /></label>
       <label class="block text-sm">Event date<input v-model="eventDate" class="input mt-2" type="date" /></label>
       <label class="block text-sm">Welcome message<textarea v-model="createWelcome" maxlength="500" rows="2" class="input mt-2" placeholder="Welcome! Share your memories…" /></label>
@@ -62,15 +71,6 @@ onMounted(load)
       <img v-if="createCoverPreview" :src="createCoverPreview" alt="Cover preview" class="h-36 w-full rounded-lg object-cover" />
       <p v-if="error" class="text-red-700" role="alert">{{ error }}</p>
       <button class="btn" :disabled="busy">{{ busy ? 'Creating…' : 'Create event' }}</button>
-    </form>
-    <p v-if="loading" class="mt-8 text-[#536273]">Loading events…</p>
-    <div v-else class="grid md:grid-cols-2 gap-4 mt-8">
-      <NuxtLink v-for="event in events" :key="event.id" :to="`/dashboard/events/${event.id}`" class="panel block hover:border-[#D6B077]">
-        <h3 class="text-xl font-semibold">{{ event.title }}</h3>
-        <p class="text-[#536273] text-sm mt-2">{{ event.event_date || 'Date not set' }} · {{ event.status }}</p>
-        <p class="text-[#90612E] text-sm mt-4">Manage event →</p>
-      </NuxtLink>
-      <p v-if="!events.length" class="text-[#536273]">No events yet. Create your first event above.</p>
-    </div>
+    </form></details>
   </div>
 </template>

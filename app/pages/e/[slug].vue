@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ImagePlus } from 'lucide-vue-next'
 const route=useRoute()
 const client=useSupabaseClient()
 const dialog=useAppDialog()
@@ -112,7 +113,7 @@ const canUpload=computed(()=>item.value?.status==='active'&&(!item.value.upload_
 const uploadsNotYetOpen=computed(()=>{const t=item.value?.upload_starts_at?Date.parse(item.value.upload_starts_at):NaN;return Number.isFinite(t)&&now.value<t})
 const uploadsFinished=computed(()=>{const t=item.value?.upload_ends_at?Date.parse(item.value.upload_ends_at):NaN;return Number.isFinite(t)&&now.value>t})
 const canBrowse=computed(()=>item.value?.gallery_visibility==='shared'&&unlocked.value)
-useHead({title:'Share memories · EventKeepsakes'})
+useHead(()=>({title:item.value?.title?`${item.value.title} · Share memories`:'Share memories',meta:[{name:'robots',content:'noindex, nofollow'}]}))
 async function load(){
  const {data,error:err}=await client.rpc('get_guest_event',{p_slug:slug})
  if(err) error.value=err.message
@@ -199,8 +200,8 @@ onMounted(()=>{timer=setInterval(()=>now.value=Date.now(),1000);window.addEventL
 onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydown',galleryKeydown);cleanupPreviews()})
 </script>
 <template>
- <main class="mx-auto max-w-4xl px-5 py-12 space-y-7">
-  <div v-if="loading" class="text-[#536273]">Loading event…</div>
+ <div class="mx-auto max-w-4xl px-5 py-12 space-y-7">
+  <div v-if="loading" class="space-y-5" aria-busy="true" role="status"><span class="sr-only">Loading event…</span><div class="skeleton mx-auto h-10 w-2/3"></div><div class="skeleton h-48"></div></div>
   <div v-else-if="item" class="space-y-7">
    <header v-if="unlocked && brand.cover_url" class="relative isolate flex min-h-[340px] flex-col justify-end overflow-hidden rounded-2xl sm:min-h-[440px]" :class="brand.hero_alignment==='left'?'items-start text-left':brand.hero_alignment==='right'?'items-end text-right':'items-center text-center'">
     <img :src="brand.cover_url" alt="Event cover photo" class="absolute inset-0 -z-20 h-full w-full object-cover" />
@@ -264,16 +265,19 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
        <input id="guest-name" v-model="guestName" class="input mt-2" maxlength="120" :required="item.guest_name_mode==='required'" placeholder="Your name" />
       </label>
       <label for="guest-files" class="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 text-center transition focus-within:ring-2 focus-within:ring-[#B18A50]" :class="dragging ? 'border-[#B18A50] bg-[#F0E2C8] ring-2 ring-[#B18A50]' : 'border-[#D6B077] bg-[#FFFDF8] hover:bg-[#F8F0E2]'" @dragenter.prevent="dragEnter" @dragover.prevent="dragOver" @dragleave.prevent="dragLeave" @drop.prevent="dropFiles">
-       <span class="text-3xl" aria-hidden="true">📷</span>
-       <span class="font-semibold text-[#0C1D2D]">{{ dragging ? 'Drop your photos & videos here' : 'Drag & drop photos and videos here' }}</span>
-       <span class="text-xs text-[#536273]">or click to browse your device · Select multiple files</span>
+       <span class="flex h-14 w-14 items-center justify-center rounded-full bg-[#F0E2C8] text-[#90612E]" aria-hidden="true"><ImagePlus :size="28" /></span>
+       <span class="text-lg font-semibold text-[#0C1D2D]">
+        <span class="[@media(pointer:coarse)]:hidden">{{ dragging ? 'Drop your photos & videos here' : 'Drag & drop photos and videos here' }}</span>
+        <span class="hidden [@media(pointer:coarse)]:inline">Tap to choose photos &amp; videos</span>
+       </span>
+       <span class="text-xs text-[#536273]"><span class="[@media(pointer:coarse)]:hidden">or click to browse your device · </span>You can select several at once</span>
        <input id="guest-files" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm" multiple class="sr-only" :disabled="busy" @change="selected" />
       </label>
       <p class="text-xs text-[#647080]">Photos up to 20 MB each · Videos up to 100 MB each · Uploads may require organiser approval.</p>
       <div v-if="uploads.length" class="space-y-3" aria-live="polite">
        <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold">Selected memories ({{uploads.length}})</h3><button v-if="uploadDone" type="button" class="text-sm font-medium text-[#90612E] underline" :disabled="busy" @click="clearCompleted">Clear completed</button></div>
        <div v-for="x in uploads" :key="x.key" class="flex items-center gap-3 rounded-lg border border-[#E4D8C5] bg-white p-3">
-        <img v-if="x.preview" :src="x.preview" alt="Selected photo preview" class="h-14 w-14 shrink-0 rounded-md object-cover" />
+        <img v-if="x.preview" :src="x.preview" alt="" class="h-14 w-14 shrink-0 rounded-md object-cover" />
         <div v-else class="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-[#F8F4EB] text-2xl" aria-hidden="true">🎬</div>
         <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold">{{x.file.name}}</p><p class="text-xs text-[#536273]">{{sizeLabel(x.file.size)}} · {{x.state==='ready'?'Ready to upload':x.state==='uploading'?'Uploading…':x.state==='uploaded'?'Uploaded successfully':'Upload failed'}}</p><p v-if="x.error" class="mt-1 text-xs text-red-700" role="alert">{{x.error}}</p></div>
         <button v-if="x.state==='ready'||x.state==='failed'" type="button" class="rounded-md border border-[#D6B077] px-2 py-1 text-sm" :disabled="busy" :aria-label="`Remove ${x.file.name}`" @click="removeFile(x.key)">Remove</button>
@@ -281,13 +285,13 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
        </div>
        <div class="space-y-1"><div class="flex justify-between text-xs text-[#536273]"><span>{{uploadDone}} of {{uploads.length}} completed</span><span>{{uploadPercent}}%</span></div><div class="h-2 overflow-hidden rounded-full bg-[#E4D8C5]" role="progressbar" :aria-valuenow="uploadDone" :aria-valuemax="uploads.length" aria-valuemin="0" aria-label="Files uploaded"><div class="h-full rounded-full bg-[#B18A50] transition-all" :style="{width:`${uploadPercent}%`}" /></div></div>
       </div>
-      <button class="btn w-full" :disabled="busy||!uploads.some(x=>x.state==='ready'||x.state==='failed')">{{busy?'Uploading memories…':uploadFailed?'Retry failed uploads':'Upload memories'}}</button>
+      <button class="btn sticky bottom-4 z-10 w-full py-4 text-base shadow-lg" :disabled="busy||!uploads.some(x=>x.state==='ready'||x.state==='failed')">{{busy?'Uploading memories…':uploadFailed?'Retry failed uploads':'Upload memories'}}</button>
      </form>
     </section>
     <section id="guest-gallery" v-if="item.gallery_visibility==='shared'" class="panel space-y-4 scroll-mt-6">
-     <div class="flex items-center justify-between gap-3"><h2 class="text-2xl font-semibold" :style="{color:brandAccent}">Shared gallery</h2><button type="button" class="text-[#90612E]" @click="loadGallery">Refresh</button></div>
+     <div class="flex items-center justify-between gap-3"><h2 class="text-2xl font-semibold" :style="{color:brandAccent}">Shared gallery</h2><button type="button" class="rounded-lg border border-[#D6B077] px-3 py-1.5 text-sm font-medium text-[#90612E] hover:bg-[#F0E4D1]" @click="loadGallery">Refresh</button></div>
      <p v-if="galleryError" class="text-red-700">{{galleryError}}</p>
-     <p v-else-if="!media.length" class="text-[#536273]">No approved photos or videos yet.</p>
+     <p v-else-if="!media.length" class="text-[#536273]">No photos or videos here yet. Be the first to share a memory!</p>
      <div v-if="media.length" class="flex flex-wrap gap-2" role="group" aria-label="Filter gallery">
       <button v-for="f in [{value:'all',label:'All memories'},{value:'image',label:'Photos'},{value:'video',label:'Videos'}]" :key="f.value" type="button" class="rounded-full border px-4 py-2 text-sm font-semibold" :class="galleryFilter===f.value?'border-[#0C1D2D] bg-[#0C1D2D] text-white':'border-[#D6B077] text-[#0C1D2D]'" :aria-pressed="galleryFilter===f.value" @click="galleryFilter=f.value as any">{{f.label}}</button>
      </div>
@@ -316,7 +320,7 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     <section v-else-if="!uploadsNotYetOpen" class="panel"><h2 class="text-xl font-semibold">Private gallery</h2><p class="mt-2 text-[#536273]">Only the event organiser can view uploaded media.</p></section>
    </template>
   </div>
-  <p v-else class="text-red-700">{{error||'Event not found'}}</p>
+  <div v-else class="panel mx-auto max-w-md space-y-2 text-center" role="alert"><h1 class="text-2xl font-semibold">We couldn’t find this event</h1><p class="text-[#536273]">{{error||'Please check the link or QR code, or ask the organiser for a new one.'}}</p></div>
   <Teleport to="body">
    <div v-if="viewing" class="fixed inset-0 z-[9000] flex items-center justify-center bg-[#081724]/95 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Guest media viewer" @touchstart.passive="onViewerTouchStart" @touchend.passive="onViewerTouchEnd" @click.self="closeMedia">
     <div class="flex h-full w-full max-w-5xl flex-col items-center justify-center gap-3">
@@ -335,5 +339,5 @@ onUnmounted(()=>{if(timer)clearInterval(timer);window.removeEventListener('keydo
     </div>
    </div>
   </Teleport>
- </main>
+ </div>
 </template>

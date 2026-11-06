@@ -85,7 +85,7 @@ function searchNow(){page.value=1;selected.value=null;load()}
 onMounted(load)
 </script>
 <template>
-<main class="mx-auto max-w-6xl px-5 py-10 space-y-5">
+<div class="mx-auto max-w-6xl px-5 py-10 space-y-5">
 <NuxtLink to="/admin" class="btn inline-flex">← Administration</NuxtLink>
 <h1 class="text-3xl font-bold">Customer &amp; Event Support</h1>
 <p class="text-[#536273]">Staff-only support tools. Customer media remains private; support staff cannot browse or download uploaded photos and videos here.</p>
@@ -160,5 +160,5 @@ onMounted(load)
 <button class="btn" :disabled="saving||!note.trim()" @click="saveNote">Save note</button>
 <p class="text-xs text-[#536273]">Notes are visible to authorised staff, not customers. Do not record passwords, PINs or sensitive personal details.</p>
 </section>
-</main>
+</div>
 </template>
