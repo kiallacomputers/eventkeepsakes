@@ -85,7 +85,7 @@ function fitText(){
 let observer:ResizeObserver|undefined
 onMounted(()=>{if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>fitText());if(canvasEl.value)observer.observe(canvasEl.value)}nextTick(fitText);if(typeof document!=='undefined')document.fonts?.ready.then(fitText)})
 onBeforeUnmount(()=>observer?.disconnect())
-watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.eventName,props.eventDate],async()=>{
+watch(()=>[props.config?.smartAreas,props.config?.typography,props.config?.heading,props.config?.message,props.config?.eventTitleLayout,props.eventName,props.eventDate],async()=>{
  await nextTick()
  fitText()
  if(typeof document!=='undefined')document.fonts?.ready.then(fitText)
@@ -112,12 +112,12 @@ function fieldText(key:SignKey){
 }
 const titleLayout=computed(()=>String(props.config?.eventTitleLayout||'single'))
 const pairedNames=computed(()=>{
- const parts=String(props.eventName||'').split(/\\s+(?:&|and)\\s+/i).map(s=>s.trim())
+ const parts=String(props.eventName||'').split(/\s+(?:&|and)\s+/i).map(s=>s.trim())
  return parts.length===2&&parts.every(Boolean)?parts:null
 })
 const creativeTitle=computed(()=>pairedNames.value&&titleLayout.value!=='single')
 function titleModeClass(){return 'ek-title-'+( ['stacked','overlap','diagonal','side-by-side','monogram','split'].includes(titleLayout.value)?titleLayout.value:'single')}
-function initials(name:string){return name.split(/\\s+/).filter(Boolean).map(s=>s[0]?.toUpperCase()||'').slice(0,2).join('')}
+function initials(name:string){return name.split(/\s+/).filter(Boolean).map(s=>s[0]?.toUpperCase()||'').slice(0,2).join('')}
 function textStyle(key:SignKey){
  const t=props.config?.typography?.[key]||{},p=props.config?.textPlacement?.[key]||{}
  const n=Number(t.size||16)
