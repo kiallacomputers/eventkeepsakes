@@ -197,10 +197,12 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 .ek-title-amp{font-family:inherit;font-style:inherit;font-weight:inherit;opacity:.68}
 .ek-title-stacked{grid-template-columns:1fr;gap:.04em}
 .ek-title-stacked .ek-title-amp{font-size:.8em;line-height:.9}
-.ek-title-overlap{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;row-gap:0}
-.ek-title-overlap .ek-title-first{grid-area:1/1/2/3;justify-self:start;margin-left:7%}
-.ek-title-overlap .ek-title-amp{grid-area:2/1/3/3;font-size:1.12em;line-height:.65}
-.ek-title-overlap .ek-title-second{grid-area:3/1/4/3;justify-self:end;margin-right:7%}
+/* Romantic overlap: large decorative ampersand behind the names, not a third row. */
+.ek-title-overlap{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 1fr;align-items:center;justify-items:center;min-height:2.5em;isolation:isolate;row-gap:0;padding:.12em .08em}
+.ek-title-overlap .ek-title-first,.ek-title-overlap .ek-title-second{position:relative;z-index:2;max-width:92%;line-height:1.15;text-shadow:0 0 .08em var(--ek-title-shadow,transparent)}
+.ek-title-overlap .ek-title-first{grid-area:1/1;justify-self:start;margin-left:5%;transform:translateY(.18em)}
+.ek-title-overlap .ek-title-second{grid-area:2/1;justify-self:end;margin-right:5%;transform:translateY(-.18em)}
+.ek-title-overlap .ek-title-amp{grid-area:1/1/3/2;position:relative;z-index:1;align-self:center;justify-self:center;font-family:inherit;font-style:inherit;font-weight:inherit;font-size:2.35em;line-height:1;opacity:.42;pointer-events:none}
 .ek-title-diagonal{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto}
 .ek-title-diagonal .ek-title-first{grid-area:1/1/2/3;justify-self:start}
 .ek-title-diagonal .ek-title-amp{grid-area:2/1/3/3;line-height:.8;font-size:.85em}
