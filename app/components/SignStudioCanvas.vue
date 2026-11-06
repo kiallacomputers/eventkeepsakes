@@ -215,5 +215,6 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 .ek-title-split .ek-title-first{justify-self:end}
 .ek-title-split .ek-title-second{justify-self:start}
 .ek-title-split .ek-title-amp{font-size:1.65em;line-height:1}
-\n@media print {.ek-shared-sign,.ek-shared-sign *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}
+
+@media print {.ek-shared-sign,.ek-shared-sign *{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}
 </style>
