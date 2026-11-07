@@ -214,15 +214,15 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
  text-shadow:0 0 .08em var(--ek-title-shadow,transparent);
 }
 .ek-title-overlap .ek-title-first{
- margin-right:-.20em;transform:translateY(-.40em);
+ margin-right:-.30em;transform:translateY(-.52em);
 }
 .ek-title-overlap .ek-title-second{
- margin-left:-.20em;transform:translateY(.40em);
+ margin-left:-.34em;transform:translateY(.47em);
 }
 .ek-title-overlap .ek-title-amp{
  position:relative;z-index:1;flex:0 0 auto;
  font-family:inherit;font-style:inherit;font-weight:inherit;
- font-size:2.35em;line-height:1;opacity:.50;
+ font-size:2.05em;line-height:1;opacity:.50;
  pointer-events:none;
 }
 .ek-title-diagonal{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto}
