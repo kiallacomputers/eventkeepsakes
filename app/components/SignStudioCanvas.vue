@@ -198,11 +198,33 @@ function choose(key:SignKey){if(props.editable&&key!=='qr')emit('select',key)}
 .ek-title-stacked{grid-template-columns:1fr;gap:.04em}
 .ek-title-stacked .ek-title-amp{font-size:.8em;line-height:.9}
 /* Romantic overlap: large decorative ampersand behind the names, not a third row. */
-.ek-title-overlap{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 1fr;align-items:center;justify-items:center;min-height:2.5em;isolation:isolate;row-gap:0;padding:.12em .08em}
-.ek-title-overlap .ek-title-first,.ek-title-overlap .ek-title-second{position:relative;z-index:2;max-width:92%;line-height:1.15;text-shadow:0 0 .08em var(--ek-title-shadow,transparent)}
-.ek-title-overlap .ek-title-first{grid-area:1/1;justify-self:start;margin-left:5%;transform:translateY(.18em)}
-.ek-title-overlap .ek-title-second{grid-area:2/1;justify-self:end;margin-right:5%;transform:translateY(-.18em)}
-.ek-title-overlap .ek-title-amp{grid-area:1/1/3/2;position:relative;z-index:1;align-self:center;justify-self:center;font-family:inherit;font-style:inherit;font-weight:inherit;font-size:2.35em;line-height:1;opacity:.42;pointer-events:none}
+/* Romantic overlap: size to actual name widths, not the full Smart Area.
+   Negative margins bring the end/start letters into the ampersand's strokes. */
+.ek-title-overlap{
+ display:flex;flex-direction:row;align-items:center;justify-content:center;
+ width:max-content;max-width:100%;margin-inline:auto;
+ min-height:2.35em;gap:0;padding:.14em .04em;
+ isolation:isolate;white-space:nowrap;
+}
+.ek-title-overlap .ek-title-first,
+.ek-title-overlap .ek-title-second{
+ position:relative;z-index:2;flex:0 1 auto;
+ max-width:none;min-width:0;line-height:1.2;
+ overflow-wrap:normal;white-space:nowrap;
+ text-shadow:0 0 .08em var(--ek-title-shadow,transparent);
+}
+.ek-title-overlap .ek-title-first{
+ margin-right:-.20em;transform:translateY(-.40em);
+}
+.ek-title-overlap .ek-title-second{
+ margin-left:-.20em;transform:translateY(.40em);
+}
+.ek-title-overlap .ek-title-amp{
+ position:relative;z-index:1;flex:0 0 auto;
+ font-family:inherit;font-style:inherit;font-weight:inherit;
+ font-size:2.35em;line-height:1;opacity:.50;
+ pointer-events:none;
+}
 .ek-title-diagonal{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto}
 .ek-title-diagonal .ek-title-first{grid-area:1/1/2/3;justify-self:start}
 .ek-title-diagonal .ek-title-amp{grid-area:2/1/3/3;line-height:.8;font-size:.85em}
